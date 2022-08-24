@@ -7,8 +7,8 @@
                 <page string="Romania fields" name="l10n_ro" >
                     <group>
                         <field name="l10n_ro_valued_type" />
-                        <field name="l10n_ro_draft_history" />
                         <field name="l10n_ro_bill_accounting_date" />
+                        <field name="l10n_ro_is_draft" />
                     </group>
                 </page>
             </notebook>
@@ -21,6 +21,8 @@
             <field name="create_date" position="after">
                   <field name="l10n_ro_bill_accounting_date" optional="show" />
                   <field name="l10n_ro_valued_type" optional="show" />
+                  <field name="l10n_ro_is_draft" optional="show" />
+                  
             </field>
         </field>
     </record>

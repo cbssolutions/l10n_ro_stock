@@ -21,6 +21,7 @@ class AccountMove(models.Model):
         help="If this field is set, "
         "means that the reception picking (that is not notice) valuation is given by this bill",
         readonly=0,
+        copy=0
     )
 
     @api.constrains("l10n_ro_bill_for_picking", "state")
@@ -42,6 +43,18 @@ class AccountMove(models.Model):
         context["no_at_date"] = True
         return dict(action, domain=domain, context=context)
 
+
+    def _stock_account_prepare_anglo_saxon_in_lines_vals(self):
+        # we do not create price difference at reception
+        # we can not have price difference invoice price must be the svl price
+        invoices = self
+        for move in self:
+            if move.is_l10n_ro_record:
+                invoices -= move
+        return super(
+            AccountMove, invoices
+        )._stock_account_prepare_anglo_saxon_in_lines_vals()
+    
     def _stock_account_prepare_anglo_saxon_out_lines_vals(self):
         # nu se mai face descarcarea de gestiune la facturare
         invoices = self
@@ -105,9 +118,9 @@ class AccountMove(models.Model):
                         )
                     )
                 if svl.remaining_qty == 0:
-                    # we are not going to create any svl, we are not going to use in line the account for stock but consume
-                    line.account_id = line.product_id.account_id.id
-                    # !!!!!!!!!!!!!!! up is wrong
+                    # we are not going to create any svl, we are not going to use in line the stock account
+                    # but the expense account for consumtion
+                    line.account_id = line.product_id._get_product_accounts()["expense"].id
                 else:
                     created_svl = (
                         self.env["stock.valuation.layer"]

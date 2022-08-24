@@ -13,11 +13,8 @@ class StockValuationLayer(models.Model):
         readonly=True,
         help="This is the date from billing accounting date. The bill that generate this svl",
     )
-    l10n_ro_draft_history = fields.Text(
-        help="Each time, the bill that generated this "
-        "svl is put into draft we are recording values that we are changing with 0"
-    )
-
+    l10n_ro_is_draft = fields.Boolean(readonly=0, help="was created from a setting to draft. at next setting to draft is not going to modify this entry")
+    
     @api.model_create_multi
     def create(self, vals_list):
         for values in vals_list:

@@ -14,6 +14,7 @@ class AccountMove(models.Model):
     # try to keep the stock value account 3xx at same value as stock_valuation
     # at setting to draft account_moves (invoices and not) that have valuation on them
     # can be the case of reception or + inventory
+    # and than at posting
 
     _inherit = "account.move"
 
@@ -21,12 +22,14 @@ class AccountMove(models.Model):
         
     def action_post(self):
         # post again of account_moves with svl ( before were set to draft)
+        # the bills that have l10n_ro_bill_for_picking are not taken into consideration
+        #    because is like in the case from the first posting the invoice
         precision = self.env["decimal.precision"].precision_get(
             "Product Unit of Measure"
         )
 
         for move in self.filtered(
-            lambda r: r.is_l10n_ro_record and r.stock_valuation_layer_ids
+            lambda r: r.is_l10n_ro_record and r.stock_valuation_layer_ids and not r.l10n_ro_bill_for_picking
         ):
 
             for svl in move.stock_valuation_layer_ids:
@@ -91,15 +94,7 @@ class AccountMove(models.Model):
                         "value": balance,
                         "unit_cost": unit_cost,  # maybe with ..
                         "l10n_ro_bill_accounting_date": move.date,
-                        "l10n_ro_draft_history": (
-                            f"{fields.datetime.now()} POSTED "
-                            f"Bill={move.name} bill_id={move.id} "
-                            f"balance={balance} unit_cost={unit_cost} "
-                            f"old remaining_value={svl.remaining_value} "
-                            f"new remaining_value={remaining_value} "
-                            "\n"
-                        )
-                        + (svl.l10n_ro_draft_history or ""),
+
                     }
                 )
 
@@ -117,26 +112,34 @@ class AccountMove(models.Model):
                 and move.stock_valuation_layer_ids
                 and move.state != "cancel"
             ):
-                for svl in move.stock_valuation_layer_ids:
+                for svl in move.stock_valuation_layer_ids.filtered(lambda r: not r.l10n_ro_is_draft):
                     text_error = (
                         f"For AccountMove=({move.ref},{move.id}) at "
                         f"product=({svl.product_id.name},{svl.product_id.id}) "
                         f"svl={svl} qty={svl.quantity}"
                     )
-                    if svl.quantity <= 0 and svl.value != 0:
-                        raise UserError(
-                            _(
-                                text_error
-                                + f" svl quantity is less than 0 and value != 0, is a out move with value from stock. You are not allowed to do it because were modifed also other svl (their value is taken from other svl). Make a inverse operation, or a manual journal entry."
-                            )
-                        )
-
                     to_do_error = (
                         "You are not allowed to put to draft this bill, "
                         "because is going to create difference between account 3xx and "
                         "stock value. Create a journal entry to fix what you need. "
                         "Or make the return and add a credit note."
                     )
+                    if svl.quantity < 0:
+                        raise UserError(
+                            _(
+                                text_error
+                                + f" svl quantity is less than 0, is a out move with value from stock. You are not allowed to do it because were modifed also other svl (their value is taken from other svl). Make a inverse operation, or a manual journal entry."
+                            )
+                        )
+                    elif svl.quantity == 0 and svl.stock_valuation_layer_id and svl.stock_valuation_layer_id.remaining_qty <=0: 
+                        raise UserError(
+                            _(
+                                text_error
+                                + f" Linked_svl={svl.stock_valuation_layer_id} quantity is less than 0." 
+                                + to_do_error
+                            )
+                        )
+
                     if svl.stock_valuation_layer_ids:
                         raise UserError(
                             _(
@@ -145,30 +148,27 @@ class AccountMove(models.Model):
                                 + to_do_error
                             )
                         )
-                    if svl.quantity != svl.remaining_qty or (
-                        svl.remaining_value and svl.value != svl.remaining_value
-                    ):
-                        raise UserError(
-                            _(
-                                text_error
-                                + f" you have diffrence between remaining quantity={svl.remaining_qty} or "
-                                f"remaining value={svl.remaining_value}." + to_do_error
-                            )
-                        )
-                    svl.write(
+                    if svl.stock_valuation_layer_id:
+                        svl_to_modify = svl.stock_valuation_layer_id
+                    else:
+                        svl_to_modify = svl
+                    corected_svl = svl.create(
                         {
-                            "remaining_value": svl.remaining_value
-                            - svl.value,  # can be diff because landed cost
-                            "value": 0,
-                            "unit_cost": 0,
-                            "l10n_ro_draft_history": (
-                                f"{fields.datetime.now()} Set DRAFT"
-                                f"bill: {move.name} bill_id={move.id} "
-                                f"value={svl.value} unit_cost={svl.unit_cost} "
-                                f"remaining_value={svl.remaining_value}"
-                                "\n"
-                            )
-                            + (svl.l10n_ro_draft_history or ""),
+                            "description": f"Setting to draft inv=({move.id},{move.name})",
+                            "remaining_value": 0,
+                                "account_move_id": move.id,
+                                "product_id": svl.product_id.id,
+                                "company_id": svl.company_id.id,
+                                "unit_cost": 0,
+                                "value": -1*svl.value,
+                                "remaining_value": 0,
+                                "quantity": 0,
+                                "remaining_qty": 0,
+                                "l10n_ro_bill_accounting_date": svl.l10n_ro_bill_accounting_date,
+                                "l10n_ro_valued_type": svl.l10n_ro_valued_type,
+                                "stock_valuation_layer_id":svl_to_modify.id,
+                                "l10n_ro_is_draft":True,
                         }
                     )
+                    svl_to_modify.write({"remaining_value":svl_to_modify.remaining_value-svl.value})
         return super().button_draft()

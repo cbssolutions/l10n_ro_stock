@@ -44,11 +44,41 @@ l10n_ro_property_stock_valuation_account_id
 In stock_valuation_layer we are adding
     l10n_ro_valued_type   # just a name we can live also without
     l10n_ro_bill_accounting_date  This is the date from billing accounting date. The bill that generate this svl
-    l10n_ro_draft_history  text each time, the bill that generated this was set to draft 
 
 in stock_move_line
     mthod _create_correction_svl    
     
 in stock_move
+
+
+
+
+
+
+TEST CASE:
+A. RECEPTION: (cost price 9.1  9.2 9.3 9.4)
+
+A1. picking:    p91  x 10units   & p92  X 20units& p93 x 30 units   p94 cosumable      date today
+svl for p91, p92, p93 with received qty and value of 0
+
+till the inovie  p91 remaining qty 0, p92 remaing qty 4, p 93 remaing qty 30
+what we deliver from this reception is going to get out with a value of 0 ( because we did not record the invoice in odoo, and does not know any cost)
+
+A2. invoice: it must have the picking as l10n_ro_bill_for_picking   ( is the field that is telling odoo for what picking is this inovice.)
+is going to verify picking vs invoice lines and qty to be the same, if not will raise error
+
+invoice     p91   10lei    p92  12lei   p93  13 p94 14  accounting_date yesterday
+accounting lines   6xx  debit 100lei ( p91)     3xx debit 240 (p92)    3xx debit 390 (p92)  6xx debit 420
+new svl (with account_move_id the invoice) for p92 with stock_valuation_layer_id (linked to reception svl) will recive a qty 0 with value of 240 => unit_value =240/4 = 60
+new svl for p93 with qty=0 and value of 390 => now p93 from stock have a unit value of 13
+
+A3. we deliver 2 x p92  and 10 x p93  
+=> svl with -qty and price with accounting_entries that are p92: debit 3xx 120  p93: debit 3xx  130
+
+B. Setting to draft of a account_move (invoice or accounting entry) that has svl:
+B1 if remaining_qty
+- will create with same account_move_id a svl with minus that value and modify the svl with qty remaining_qty 
+    to be able to set to draft/post multiple times in svl exist a field l10n_ro_is_draft that is true at svl created from setting to draft
+B2 if no remaining_qty (and has svl_value ) it will not let you setting it to draft because it can not put back the svl value 
 
      
