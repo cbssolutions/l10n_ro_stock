@@ -1,0 +1,1 @@
+from . import test_partner_update_l10n_ro_vat_subjected
