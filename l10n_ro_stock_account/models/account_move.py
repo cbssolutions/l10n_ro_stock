@@ -4,8 +4,8 @@
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
 
 from ast import literal_eval
-from odoo import _, fields, models
-from odoo.exceptions import UserError
+from odoo import _, api, fields, models
+from odoo.exceptions import UserError, ValidationError
 from odoo.tools import float_compare
 import logging
 
@@ -19,10 +19,17 @@ class AccountMove(models.Model):
     l10n_ro_bill_for_picking = fields.Many2one(
         "stock.picking",
         help="If this field is set, "
-        "means that the picking valuation is given by this bill",
-        readonly=1,
-        default="",
+        "means that the reception picking (that is not notice) valuation is given by this bill",
+        readonly=0,
     )
+
+    @api.constrains("l10n_ro_bill_for_picking", "state")
+    def _check_unique_l10n_ro_bill_for_picking(self):
+        for rec in self:
+            if rec.state == "done" and rec.l10n_ro_bill_for_picking:
+                other_inv = self.search([("id", "!=", rec.id),("l10n_ro_bill_for_picking", "==", rec.l10n_ro_bill_for_picking.id)])
+                if other_inv:
+                    raise ValidationError(_(f"For invoice=({rec.id},{rec.name}) can only have a invoice per picking l10n_ro_bill_for_picking=({self.id},{self.name}) you have also {other_inv}!"))
 
     def action_view_stock_valuation_layers(self):
         self.ensure_one()
@@ -46,76 +53,39 @@ class AccountMove(models.Model):
         )._stock_account_prepare_anglo_saxon_out_lines_vals()
 
     def action_post(self):
+        # for a invoice that is made from a reception picking -has l10n_ro_bill_for_picking
         # we have the qty in reception and price in invoice (qty must be from picking)
+        # in svl from picking we are going toset invoice date to curent svl, and create a value
         precision = self.env["decimal.precision"].precision_get(
             "Product Unit of Measure"
         )
-
         for move in self.filtered(lambda r: r.is_l10n_ro_record):
             if move.move_type not in ["in_invoice", "in_recepit"]:
                 continue
-            if move.l10n_ro_bill_for_picking or move.stock_valuation_layer_ids:
-                continue  #
-            picking = self.env["stock.picking"]
-            for line in move.line_ids:
-                if (
-                    line.product_id.type != "product"
-                    or line.product_id.valuation != "real_time"
-                ):
-                    continue
-                text_error = (
-                    f"For Bill:({move.ref},{move.id}) at "
-                    f"product=({line.product_id.name},{line.product_id.id}) "
+            picking = move.l10n_ro_bill_for_picking
+            if not picking:
+                continue
+            text_error = f"For Bill:({move.id},{move.ref}) "
+            invoice_product_line = move.line_ids.filtered(lambda r: r.product_id.type=="product" and r.product_id.valuation == "real_time" and r.quantity!=0)
+            
+            if len(invoice_product_line) != len(picking.move_lines.stock_valuation_layer_ids):
+                raise ValidationError(_(text_error + " we have different products with real time valuation (invoice lines products compared with picking(svl))"))
+            for line in invoice_product_line:
+                text_error += (
+                    f" product=({line.product_id.id},{line.product_id.name}) "
                     f"qty = {line.quantity}"
                 )
-                if not line.purchase_line_id:
-                    raise UserError(
-                        _(
-                            text_error + " we do not have a puchase line."
-                            "We can not continue because will create a accunt 3xx value "
-                            "without stock_value for it"
-                        )
-                    )
-                domain = [
-                    ("purchase_line_id", "=", line.purchase_line_id.id),
-                    ("product_qty", "!=", 0.0),
-                    ("state", "=", "done"),  # drafts can be backorders
-                ]
-                # HERE I THINK I MUST CONVERT THE purchase QTY IN PRODUCT QTY
                 line_qty = line.quantity
-                stock_moves = self.env["stock.move"].search(domain)
-                stock_moves_without_svl = stock_moves.filtered(
-                    lambda r: not r.stock_valuation_layer_ids
-                )
-                if stock_moves and not stock_moves_without_svl:
-                    # should be a notice picking ( has svl done at reception)
-                    break
-                if len(stock_moves_without_svl) != 1:
+                stock_move = picking.move_lines.filtered(lambda r: r.product_id==line.product_id and r.quantity_done != 0 and r.stock_valuation_layer_ids)
+                if len(stock_move) != 1:
                     raise UserError(
                         _(
                             text_error
-                            + f" the reception must have one done stock_move without svl. "
-                            f"stock_moves_without_svl={stock_moves_without_svl}"
+                            + f" we did not found one stock_move (that has svl). "
+                            f"found stock_move={stock_move}"
                         )
                     )
-                if not stock_moves_without_svl.picking_id:
-                    raise UserError(
-                        _(
-                            text_error
-                            + f" stock_move_id={stock_moves[0].id} does not have a picking"
-                        )
-                    )
-                if not picking:
-                    picking = stock_moves_without_svl.picking_id
-                elif picking != stock_moves_without_svl.picking_id:
-                    raise UserError(
-                        _(
-                            f"For bill=({move.ref},{move.id}), exist more picking={picking}"
-                            f" You recorded a reception based on bill, go in each reception and a bill"
-                        )
-                    )
-
-                stock_move_qty = stock_moves_without_svl.product_uom_qty
+                stock_move_qty = stock_move.product_uom_qty
                 if (
                     float_compare(line_qty, stock_move_qty, precision_digits=precision)
                     != 0
@@ -126,29 +96,41 @@ class AccountMove(models.Model):
                             + f" the reception has invoice line_qty={line_qty} that is not equal with stock_move_qty={stock_move_qty}"
                         )
                     )
-                svl = (
-                    self.env["stock.valuation.layer"]
-                    .sudo()
-                    .create(
-                        {
-                            "description": f"Reception inv=({move.ref},{move.id}) picking=({picking.name},{picking.id})",
-                            "account_move_id": move.id,
-                            "stock_move_id": stock_moves_without_svl[0].id,
-                            "product_id": line.product_id.id,
-                            "company_id": move.company_id.id,
-                            "unit_cost": line.balance / line.quantity,
-                            "value": line.balance,
-                            "remaining_value": line.balance,
-                            "l10n_ro_bill_accounting_date": move.date,
-                            "quantity": line.quantity,
-                            "remaining_qty": line.quantity,
-                            "unit_cost": line.balance / line.quantity,
-                            "l10n_ro_valued_type": "reception",
-                        }
+                svl = stock_move.stock_valuation_layer_ids 
+                if len(svl) != 1:
+                    raise UserError(
+                        _(
+                            text_error
+                            + f" for move={stock_move} we need to have one svl, but svl={svl}"
+                        )
                     )
-                )
-            if picking:
-                move.write({"l10n_ro_bill_for_picking": picking.id})
+                if svl.remaining_qty == 0:
+                    # we are not going to create any svl, we are not going to use in line the account for stock but consume
+                    line.account_id = line.product_id.account_id.id
+                    # !!!!!!!!!!!!!!! up is wrong
+                else:
+                    created_svl = (
+                        self.env["stock.valuation.layer"]
+                        .sudo()
+                        .create(
+                            {
+                                "description": f"Reception inv=({move.id},{move.ref}) picking=({picking.id},{picking.name})",
+                                "account_move_id": move.id,
+#                                "stock_move_id": stock_move.id,
+                                "product_id": line.product_id.id,
+                                "company_id": move.company_id.id,
+                                "unit_cost": 0,
+                                "value": line.balance,
+                                "remaining_value": 0,
+                                "l10n_ro_bill_accounting_date": move.date,
+                                "quantity": 0,
+                                "remaining_qty": 0,
+                                "l10n_ro_valued_type": "reception",
+                                "stock_valuation_layer_id":svl.id,
+                            }
+                        ))
+                    svl.write({"remaining_value": svl.remaining_value + line.balance, 
+                               "l10n_ro_bill_accounting_date": move.date})
 
         res = super(AccountMove, self).action_post()
 

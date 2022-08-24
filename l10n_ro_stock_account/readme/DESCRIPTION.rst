@@ -15,7 +15,15 @@ For consumable products we are not going to make stock_valuation_entries at move
 In Romania, the products get into stock with supplier invoice/bill ( and svl is created based on the values from bill).
 Another case is when the products are geting into stock with a value (picking type notice) and after a time is coming the bill - is covered in l10n_ro_stock_notice module
 
-To make the svl and accouting entries for stock account, the procurments and deliveries must be done from pucase/sales.
+At a validatin of reception that does not have l10n_ro_is_notice will create a svl recived qty and value of 0.
+If the puchase module is instaled is going also to press the button on purchase order to create the bill and will have l10n ro bill for picking the validation picking
+
+If a invoice has l10n_ro_bill_for_picking at validation is going to:
+  - verify if the producst form reception ar in picking   - if not error
+  - verify if is the same recived qty - if not error
+  - if in svl still exist qty, the invoice will create a svl that is giving aditional value to what remain
+  - if no qty exist in stock - instead on incresing the 3xx account will create a consume account line
+  
 
 
 

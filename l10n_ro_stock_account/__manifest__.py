@@ -11,8 +11,8 @@
     "website": "https://github.com/OCA/l10n-romania",
     "depends": [
         "stock_account",
-        "sale_stock",
-        "purchase_stock",
+        # "sale_stock",
+         "purchase_stock", # works also with them but also without
         "l10n_ro_stock",
     ],
     "license": "AGPL-3",
@@ -27,5 +27,5 @@
     ],
     "pre_init_hook": "pre_init_hook",
     "installable": True,
-    "maintainers": ["dhongu", "feketemihai"],
+    "maintainers": ["dev@cbssolutions.ro"],
 }

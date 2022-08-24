@@ -12,11 +12,13 @@ _logger = logging.getLogger(__name__)
 
 class AccountMove(models.Model):
     # try to keep the stock value account 3xx at same value as stock_valuation
-    # at setting to draft account_moves that have valuation on them
+    # at setting to draft account_moves (invoices and not) that have valuation on them
     # can be the case of reception or + inventory
 
     _inherit = "account.move"
 
+
+        
     def action_post(self):
         # post again of account_moves with svl ( before were set to draft)
         precision = self.env["decimal.precision"].precision_get(
@@ -101,7 +103,7 @@ class AccountMove(models.Model):
                     }
                 )
 
-        res = super(AccountMove, self).action_post()
+        res = super().action_post()
 
         return res
 

@@ -53,14 +53,38 @@ class StockMove(models.Model):
             return super()._is_returned(valued_type)
         return False
 
-    # evaluare la receptie - in mod normal nu se
+    # evaluare la receptie
     def _is_reception(self):
         "Este receptie in stoc fara aviz. We are making the svl at invoice"
-        return False
+        return (
+            self.is_l10n_ro_record
+            and self.location_id.usage == "supplier"
+            and self._is_in()
+            and self.product_id.type == "product"
+            and self.product_id.valuation == "real_time"
+        )
 
     def _create_reception_svl(self, forced_quantity=None):
-        move = self.with_context(standard=True, valued_type="reception")
-        return move._create_in_svl(forced_quantity)
+        # till the bill form supplier the value of stock is 0
+        svl_vals_list = []
+        for move in self:
+            picking = move.picking_id
+            svl_vals_list.append(
+                {
+                    "description": f"Reception picking=({picking.name},{picking.id})",
+                    "account_move_id": False,
+                    "stock_move_id": move.id,
+                    "product_id": move.product_id.id,
+                    "company_id": move.company_id.id,
+                    "value": 0,
+                    "remaining_value": 0,
+                    "l10n_ro_bill_accounting_date": False, # will be put at invoice
+                    "quantity": move.quantity_done,
+                    "remaining_qty": move.quantity_done,
+                    "unit_cost": 0,
+                    "l10n_ro_valued_type": "reception",
+                })
+        return self.env["stock.valuation.layer"].create(svl_vals_list)
 
     def _is_reception_return(self):
         """Este un retur la o receptie in stoc fara aviz"""
