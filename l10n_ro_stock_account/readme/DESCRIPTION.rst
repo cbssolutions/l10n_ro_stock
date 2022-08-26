@@ -51,8 +51,11 @@ in stock_move_line
 in stock_move
 
 
-
-
+!!!!!!!!!!!! if something is wrong in svl, go in inventory/reporting/inventory valuation, search for the product
+and in grouped product you have a + is going to open action_revaluation that is letting you add a line for that product
+that will change the remaining_value at svl with remaining_qty ( and creates also a accouting entry)
+You can create a reverse entry for accounting entry (account_move) and you will create a difference between 3xx account and the value of stock (svl).
+In general, the account_move that do not have a valuation are creating diffence between 3xx and svl
 
 
 TEST CASE:
@@ -81,4 +84,14 @@ B1 if remaining_qty
     to be able to set to draft/post multiple times in svl exist a field l10n_ro_is_draft that is true at svl created from setting to draft
 B2 if no remaining_qty (and has svl_value ) it will not let you setting it to draft because it can not put back the svl value 
 
-     
+C. Return of a reception
+C1. svl with out qty and what price it found. Is making a account_move with minus that qty (like when is inventory los)
+C1a. if they set to draft the reception invoice is going to modify the value of remaining qty
+C1b. if they are going to create a inverse invoice, this one must decrese the value of remaining svl 
+
+D. Scrap of a reception
+
+
+
+E. Delivery
+F. Delivery return   is at the same price as what was out

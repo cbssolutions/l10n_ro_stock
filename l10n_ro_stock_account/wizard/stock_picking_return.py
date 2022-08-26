@@ -5,6 +5,7 @@ from odoo import api, fields, models
 
 class StockReturnPickingLine(models.TransientModel):
     _inherit = "stock.return.picking.line"
+    # in version before used to show a warning about svl difference
 
     origin_ret_move_qty_check = fields.Boolean(compute="_compute_origin_ret_move_qty")
     origin_ret_move_qty = fields.Float(compute="_compute_origin_ret_move_qty")

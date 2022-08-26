@@ -131,14 +131,23 @@ class AccountMove(models.Model):
                                 + f" svl quantity is less than 0, is a out move with value from stock. You are not allowed to do it because were modifed also other svl (their value is taken from other svl). Make a inverse operation, or a manual journal entry."
                             )
                         )
-                    elif svl.quantity == 0 and svl.stock_valuation_layer_id and svl.stock_valuation_layer_id.remaining_qty <=0: 
-                        raise UserError(
-                            _(
-                                text_error
-                                + f" Linked_svl={svl.stock_valuation_layer_id} quantity is less than 0." 
-                                + to_do_error
+                    elif svl.quantity == 0: 
+                        if svl.stock_valuation_layer_id and svl.stock_valuation_layer_id.remaining_qty <=0: 
+                            raise UserError(
+                                _(
+                                    text_error
+                                    + f" Linked_svl={svl.stock_valuation_layer_id} quantity is less than 0." 
+                                    + to_do_error
+                                )
                             )
-                        )
+                        elif not svl.stock_valuation_layer_id and svl.remaining_qty == 0 and svl.quantity ==0:
+                            raise UserError(
+                                _(
+                                    text_error
+                                    + f" This was a manual SVL entry, that had modify the values of svl with stock when was added. Create the oposite svl entry" 
+                                )
+                            )
+                            
 
                     if svl.stock_valuation_layer_ids:
                         raise UserError(

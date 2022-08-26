@@ -24,10 +24,11 @@ class AccountMove(models.Model):
         copy=0
     )
 
-    @api.constrains("l10n_ro_bill_for_picking", "state")
+    @api.constrains("l10n_ro_bill_for_picking", "state","move_type")
     def _check_unique_l10n_ro_bill_for_picking(self):
         for rec in self:
-            if rec.state == "done" and rec.l10n_ro_bill_for_picking:
+            if rec.state == "done" and rec.l10n_ro_bill_for_picking and \
+                rec.move_type in ["in_invoice", "in_recepit"]:
                 other_inv = self.search([("id", "!=", rec.id),("l10n_ro_bill_for_picking", "==", rec.l10n_ro_bill_for_picking.id)])
                 if other_inv:
                     raise ValidationError(_(f"For invoice=({rec.id},{rec.name}) can only have a invoice per picking l10n_ro_bill_for_picking=({self.id},{self.name}) you have also {other_inv}!"))
@@ -81,7 +82,8 @@ class AccountMove(models.Model):
             text_error = f"For Bill:({move.id},{move.ref}) "
             invoice_product_line = move.line_ids.filtered(lambda r: r.product_id.type=="product" and r.product_id.valuation == "real_time" and r.quantity!=0)
             
-            if len(invoice_product_line) != len(picking.move_lines.stock_valuation_layer_ids):
+            if len(invoice_product_line) != len(picking.move_lines.stock_valuation_layer_ids.filtered(lambda r: not r.stock_valuation_layer_id)):
+                # svl with stock_valuation_layer_id can be landed cost .. and should not be taken into consideration
                 raise ValidationError(_(text_error + " we have different products with real time valuation (invoice lines products compared with picking(svl))"))
             for line in invoice_product_line:
                 text_error += (
@@ -109,7 +111,8 @@ class AccountMove(models.Model):
                             + f" the reception has invoice line_qty={line_qty} that is not equal with stock_move_qty={stock_move_qty}"
                         )
                     )
-                svl = stock_move.stock_valuation_layer_ids 
+                svl = stock_move.stock_valuation_layer_ids.filtered(lambda r: not r.stock_valuation_layer_id)
+                # we filter the stock_valuation_layer_id that are in general landed costs
                 if len(svl) != 1:
                     raise UserError(
                         _(
@@ -120,7 +123,10 @@ class AccountMove(models.Model):
                 if svl.remaining_qty == 0:
                     # we are not going to create any svl, we are not going to use in line the stock account
                     # but the expense account for consumtion
-                    line.account_id = line.product_id._get_product_accounts()["expense"].id
+                    line.write({
+                        "account_id": line.product_id._get_product_accounts()["expense"].id,
+                        "name": line.name + f"(Expensed account because in picking=({picking.id},{picking.name}) svl={svl} has 0 remaining qty)"
+                    })
                 else:
                     created_svl = (
                         self.env["stock.valuation.layer"]

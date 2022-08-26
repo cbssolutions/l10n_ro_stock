@@ -16,7 +16,8 @@
             </xpath>
             <xpath expr='//group[@id="header_right_group"]' position="inside">
                 <field name="is_l10n_ro_record" invisible="0" />
-                <field name="l10n_ro_bill_for_picking" attrs="{'invisible':('is_l10n_ro_record','=', False)}"/>
+                <field name="l10n_ro_bill_for_picking" attrs="{'invisible':['|', ('is_l10n_ro_record', '=', False),
+                ('move_type', 'not in', ['in_invoice', 'in_recepit'])], 'readonly': [('state', '!=', 'draft')]}"/>
             </xpath>
         </field>
     </record>
