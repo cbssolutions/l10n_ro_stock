@@ -86,15 +86,33 @@ B2 if no remaining_qty (and has svl_value ) it will not let you setting it to dr
 
 C. Return of a reception ( delivery of what was recived that can have other prices becuase landed cost, or already deliverred and returned others ..) reception_return
 C1. svl with out qty and what price it found. Is making a account_move with minus that qty (like when is inventory los)
+for each svl will create a posted account entry with credit in 3xx with value of products that were taken for return
 
+!!!!!!!!!!!   Vendor Credit Note  for a purchase (bill) must be with accounts of consume not 3xx ( becuse is posible that we didn't return the same products and other can have diffrent prices. at return their value was taken out of stock)
 
 
 C1a. if they set to draft the reception invoice is going to modify the value of remaining qty
 C1b. if they are going to create a inverse invoice, this one must decrese the value of remaining svl 
 
-D. Scrap of a reception
+D. Scrap of a reception  = minus inventory  is creating a svl (with qty and what price is finding in stock) and account_move with value
 
 
 
 E. Delivery
-F. Delivery return   is at the same price as what was out
+At delivery picking ( sendig the products) is making a svl and account_move with the values from stock 3xx is decreasing
+At invoicing is only going to make revenue
+F. Delivery return  
+At return delivery picking is going to create a svl with exactly the same values that were send, and a account_move with 3xx increasing
+
+
+G.Inventory plus = will create a svl and account_move with the cost price that is set on product
+
+H. Inventory minus = like D. ( scrap of a reception)
+
+I. Consumtion = transfer to consumption location ( location type consume)
+Is like a delivery = like E. (is creating svl and account_move with qty and value)
+I.1. Consumtion return = like F.
+
+J. usage_giving Darea in folosinta like Delivery E. return the same as F
+
+

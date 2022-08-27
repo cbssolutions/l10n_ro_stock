@@ -478,6 +478,7 @@ class StockMove(models.Model):
         )
 
     def _get_accounting_data_for_valuation(self):
+        "retunns different values if self.is_l10n_ro_record & self.product_id.categ_id.l10n_ro_stock_account_change"
         journal_id, acc_src, acc_dest, acc_valuation = super(
             StockMove, self
         )._get_accounting_data_for_valuation()
