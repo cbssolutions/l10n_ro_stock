@@ -124,7 +124,7 @@ class AccountMove(models.Model):
                 and move.stock_valuation_layer_ids
                 and move.state != "cancel"
             ):
-                for svl in move.stock_valuation_layer_ids.filtered(lambda r: not r.l10n_ro_draft_svl_id and not r.l10n_ro_draft_svl_ids):
+                for svl in move.stock_valuation_layer_ids.filtered(lambda r: not r.l10n_ro_draft_svl_id and not (r.l10n_ro_draft_svl_ids and r.quantity==0)):
                     text_error = (
                         f"For AccountMove=({move.ref},{move.id}) at "
                         f"product=({svl.product_id.name},{svl.product_id.id}) "
@@ -176,9 +176,11 @@ class AccountMove(models.Model):
                         else:
                             svl_to_modify = svl
                         value = svl.value
+                        l10n_ro_draft_svl_id = svl
                     else:
                         # is account_move with valuation from inventory plus
                         # it should be one product_id and svl per account_mvoe
+                        svl_to_modify = svl
                         if svl.quantity == 0:
                             if not svl.stock_valuation_layer_id:
                                 raise UserError(
@@ -201,13 +203,25 @@ class AccountMove(models.Model):
                                 )
                             )
                             
-                        svl_to_modify = svl
-                        # we can have also some manual valuations, and set to draft and than posted
-                        # we are making sum of all the values from this account_entry 
-                        # to let remaing_value fom other operations unchanged
-                        value = sum((svl.stock_valuation_layer_ids + svl).mapped("value"))
-                    
-                    # we are creating a svl with the value of entry that was set to draft
+                        if not svl.l10n_ro_draft_svl_ids:
+                            # case when we modify the original inventory_plus move
+                            l10n_ro_draft_svl_id = svl
+                        else:
+                            # case when we modify the last posted inventory_plus move
+                            # others should have something in l10n_ro_draft_svl_id/s
+                            l10n_ro_draft_svl_id = svl.stock_valuation_layer_ids.filtered(lambda r: not r.l10n_ro_draft_svl_id and not r.l10n_ro_draft_svl_ids)
+                            if len(l10n_ro_draft_svl_id)!=1:
+                                raise UserError(
+                                    _(
+                                        text_error
+                                        + " we didn't one stock_valuation_layer_ids that are not for set to draft that are giving value. Found" 
+                                        f" l10n_ro_draft_svl_id={l10n_ro_draft_svl_id}" 
+                                    )
+                                )
+                                
+                        value = l10n_ro_draft_svl_id.value
+                        
+                    # we are creating a svl with the - value of entry that was set to draft
                     corected_svl = svl.create(
                         {
                             "description": f"Setting to draft inv=({move.id},{move.name})",
@@ -222,8 +236,8 @@ class AccountMove(models.Model):
                                 "remaining_qty": 0,
                                 "l10n_ro_bill_accounting_date": svl.l10n_ro_bill_accounting_date,
                                 "l10n_ro_valued_type": svl.l10n_ro_valued_type,
-                                "stock_valuation_layer_id":svl_to_modify.id,
-                                "l10n_ro_draft_svl_id":svl.id,
+                                "stock_valuation_layer_id":svl.id,
+                                "l10n_ro_draft_svl_id":l10n_ro_draft_svl_id.id ,
                         }
                     )
                     
