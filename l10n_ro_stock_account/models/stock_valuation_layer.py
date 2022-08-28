@@ -13,7 +13,9 @@ class StockValuationLayer(models.Model):
         readonly=True,
         help="This is the date from billing accounting date. The bill that generate this svl",
     )
-    l10n_ro_is_draft = fields.Boolean(readonly=0, help="was created from a setting to draft. at next setting to draft is not going to modify this entry")
+    l10n_ro_draft_svl_id = fields.Many2one("stock.valuation.layer", readonly=0, help="was created from a setting to draft. is the reverse of this svl")
+    l10n_ro_draft_svl_ids = fields.One2many("stock.valuation.layer","l10n_ro_draft_svl_id", readonly=0, help="it's value was nulled (at setting to draft the account_move) by this entry")
+
     
     @api.model_create_multi
     def create(self, vals_list):

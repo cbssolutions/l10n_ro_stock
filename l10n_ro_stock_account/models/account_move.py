@@ -150,7 +150,9 @@ class AccountMove(models.Model):
                             }
                         ))
                     svl.write({"remaining_value": svl.remaining_value + line.balance, 
-                               "l10n_ro_bill_accounting_date": move.date})
+                               "l10n_ro_bill_accounting_date": move.date,
+                               "unit_cost":(svl.remaining_value + line.balance) /svl.remaining_qty if svl.remaining_qty else 0, 
+                               })
 
         res = super(AccountMove, self).action_post()
 

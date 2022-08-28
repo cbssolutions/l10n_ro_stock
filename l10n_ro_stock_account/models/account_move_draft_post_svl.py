@@ -124,7 +124,7 @@ class AccountMove(models.Model):
                 and move.stock_valuation_layer_ids
                 and move.state != "cancel"
             ):
-                for svl in move.stock_valuation_layer_ids.filtered(lambda r: not r.l10n_ro_is_draft):
+                for svl in move.stock_valuation_layer_ids.filtered(lambda r: not r.l10n_ro_draft_svl_id and not r.l10n_ro_draft_svl_ids):
                     text_error = (
                         f"For AccountMove=({move.ref},{move.id}) at "
                         f"product=({svl.product_id.name},{svl.product_id.id}) "
@@ -223,12 +223,12 @@ class AccountMove(models.Model):
                                 "l10n_ro_bill_accounting_date": svl.l10n_ro_bill_accounting_date,
                                 "l10n_ro_valued_type": svl.l10n_ro_valued_type,
                                 "stock_valuation_layer_id":svl_to_modify.id,
-                                "l10n_ro_is_draft":True,
+                                "l10n_ro_draft_svl_id":svl.id,
                         }
                     )
                     
                     svl_to_modify.write({"remaining_value":svl_to_modify.remaining_value - value,
-                                         "unit_cost":(svl_to_modify.remaining_value - value)/svl.remaining_qty})
+                                         "unit_cost":(svl_to_modify.remaining_value - value)/svl_to_modify.remaining_qty if svl_to_modify.remaining_qty else 0} )
         
         
         return super().button_draft()
