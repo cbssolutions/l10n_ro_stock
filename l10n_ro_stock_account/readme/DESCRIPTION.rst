@@ -106,6 +106,7 @@ At return delivery picking is going to create a svl with exactly the same values
 
 
 G.Inventory plus = will create a svl and account_move with the cost price that is set on product
+You can modify the value/date of inventory by setting to draft and reposted it
 
 H. Inventory minus = like D. ( scrap of a reception)
 

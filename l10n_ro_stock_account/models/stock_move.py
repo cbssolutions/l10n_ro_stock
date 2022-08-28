@@ -284,6 +284,7 @@ class StockMove(models.Model):
         return it_is
 
     # cred ca este mai bine sa generam doua svl - o intrare si o iesire
+    # alex 202208 not verified
     def _create_internal_transfer_svl(self, forced_quantity=None):
         svl_vals_list = []
         for move in self.with_context(standard=True, valued_type="internal_transfer"):
@@ -478,7 +479,9 @@ class StockMove(models.Model):
         )
 
     def _get_accounting_data_for_valuation(self):
-        "retunns different values if self.is_l10n_ro_record & self.product_id.categ_id.l10n_ro_stock_account_change"
+        """retunns different values if self.is_l10n_ro_record & self.product_id.categ_id.l10n_ro_stock_account_change
+        not used 202208 alex
+        """
         journal_id, acc_src, acc_dest, acc_valuation = super(
             StockMove, self
         )._get_accounting_data_for_valuation()

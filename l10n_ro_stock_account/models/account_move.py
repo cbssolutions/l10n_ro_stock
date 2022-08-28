@@ -21,7 +21,8 @@ class AccountMove(models.Model):
         help="If this field is set, "
         "means that the reception picking (that is not notice) valuation is given by this bill",
         readonly=0,
-        copy=0
+        copy=0,
+        tracking=1,
     )
 
     @api.constrains("l10n_ro_bill_for_picking", "state","move_type")
