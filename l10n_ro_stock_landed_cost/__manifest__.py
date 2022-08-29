@@ -5,7 +5,7 @@
 
 {
     "name": "Stock Landed Cost romania",
-    "version": "14.0.3.0.0",
+    "version": "14.0.4.0.0",
     "depends": [
         "stock_landed_costs",
         "l10n_ro_stock_account",

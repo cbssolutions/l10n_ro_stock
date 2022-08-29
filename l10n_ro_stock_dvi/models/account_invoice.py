@@ -47,7 +47,7 @@ class AccountInvoice(models.Model):
 
         if not self._context.get(
             "is_installed_l10n_ro_stock_landed_cost_dvi_revert"
-        ) and self.l10n_ro_dvi_ids.filtered(lambda r: r.l10n_ro_landed_type == "dvi"):
+        ) and self.l10n_ro_dvi_ids.filtered(lambda r: r.l10n_ro_landed_type == "dvi" and r.state=="done"):
             raise ValidationError(
                 _(
                     "You have already a DVI for this invoice. "
@@ -56,7 +56,7 @@ class AccountInvoice(models.Model):
             )
 
         # generare dvi
-        action = self.env.ref("l10n_ro_dvi.action_account_invoice_dvi")
+        action = self.env.ref("l10n_ro_stock_dvi.action_account_invoice_dvi")
         action = action.sudo().read()[0]
         return action
 

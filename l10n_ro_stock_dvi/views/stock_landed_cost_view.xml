@@ -27,6 +27,24 @@
         </field>
     </record>
 
+    <record id='view_stock_landed_cost_tree' model='ir.ui.view'>
+        <field name="model">stock.landed.cost</field>
+        <field name="inherit_id" ref="stock_landed_costs.view_stock_landed_cost_tree" />
+        <field name="arch" type="xml">
+            <field name="state" position="before">
+                <field name="l10n_ro_landed_type" optional="show"/>
+            </field>
+        </field>
+    </record>
 
+    <record id='view_stock_landed_cost_tree2' model='ir.ui.view'>
+        <field name="model">stock.landed.cost</field>
+        <field name="inherit_id" ref="stock_landed_costs.view_stock_landed_cost_tree2" />
+        <field name="arch" type="xml">
+            <field name="state" position="before">
+                <field name="l10n_ro_landed_type" optional="show"/>
+            </field>
+        </field>
+    </record>
 
 </odoo>

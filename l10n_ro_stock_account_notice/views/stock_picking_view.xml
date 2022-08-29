@@ -16,7 +16,6 @@
                     name="l10n_ro_accounting_date"
                     attrs="{'invisible': ['|',('is_l10n_ro_record', '=', False),('l10n_ro_notice','=',False)]}"
                 />
-                
             </field>
             <!-- if is a notice/aviz to be mandatory the partner_id -->
             <field name="partner_id" position="attributes">
@@ -25,7 +24,6 @@
                 >{'required':[('l10n_ro_notice','=',True)]}</attribute>
             </field>
 
-            <!--alex 20220813  from l10n_ro_stock_account because there has no sense-->
             <xpath expr="//button[@name='action_show_details']" position="after">
                 <field name="is_l10n_ro_record" invisible="0" />
                 <field name="picking_code" invisible="0" />
@@ -40,11 +38,9 @@
                      ]}"
                 />
             </xpath>
-
-
-
         </field>
     </record>
+
     <record id="view_picking_add_notice_tree" model="ir.ui.view">
         <field name="name">view_picking_add_notice_tree</field>
         <field name="model">stock.picking</field>

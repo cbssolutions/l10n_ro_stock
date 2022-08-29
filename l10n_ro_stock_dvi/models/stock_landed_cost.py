@@ -15,7 +15,7 @@ _logger = logging.getLogger(__name__)
 class LandedCost(models.Model):
     _inherit = "stock.landed.cost"
 
-    # landed_cost fields
+    # original landed_cost fields
     vendor_bill_id = fields.Many2one(
         states={"done": [("readonly", True)]},
     )
@@ -53,6 +53,9 @@ class LandedCost(models.Model):
             or self._context.get("is_landed_cost_revert_do_not_make_account_moves")
         ):
             return super(LandedCost, self).button_validate()
+        if self.account_move_id:
+            raise UserError(_(f"For DVI (Landed Cost) = ({self.id}, {self.name}), you already have a Journal Entry. You can NOT revalidate. Create another Landed Cost (the reason is that you'll have old svl with this landed cost) "))
+
         if not self.cost_lines:
             raise UserError(_("This dvi does not have cost lines."))
         if not self.l10n_ro_tax_id:
@@ -108,8 +111,6 @@ class LandedCost(models.Model):
                         "stock_valuation_layer_id": linked_layer.id,
                         "description": self.name + f" DVI {line.product_id.name}",
                         "stock_move_id": line.move_id.id,
-                        # this field is form l10n_ro_stock_account must be changed and to be l10n_ro_account_move_line_id
-                        "invoice_line_id": line.id,
                         "product_id": line.move_id.product_id.id,
                         "stock_landed_cost_id": self.id,
                         "company_id": self.company_id.id,
