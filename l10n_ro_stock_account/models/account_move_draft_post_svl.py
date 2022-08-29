@@ -119,7 +119,10 @@ class AccountMove(models.Model):
                     accounts = product._get_product_accounts()
                     if line.account_id != accounts["stock_valuation"]:
                         continue
-                    before_created_svl = move.stock_valuation_layer_ids.filtered(lambda r: r.l10n_ro_draft_svl_id and r.product_id == product)[0]
+                    draft_svl=move.stock_valuation_layer_ids.filtered(lambda r: r.l10n_ro_draft_svl_id)
+                    if not draft_svl:
+                        continue # is first posting
+                    before_created_svl = draft_svl.filtered(lambda r: r.product_id == product)[0]
                     text_error = (
                         f"For Landed Cost AccountMove:({move.id}, {move.ref}) at "
                         f"product=({product.id}, {product.name}) "
@@ -144,7 +147,11 @@ class AccountMove(models.Model):
                                 "product stocK_validation usualy 3xx (and take out the product_id)"
                             )
                         )
-
+                    slc = before_created_svl.stock_landed_cost_id
+                    if slc.state == "draft":
+                        raise UserError(_(text_error+ f"before_created_svl={before_created_svl.id}{before_created_svl.description}"
+                                          f" has stock_landed_cost=({slc.id}, {slc.name}) that is in draft state. Make the operation from landed cost (or create another one)!"))
+                        
                     balance = line.balance
                     created_svl = before_created_svl.sudo().create(
                         {
