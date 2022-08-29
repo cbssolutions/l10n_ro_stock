@@ -117,3 +117,7 @@ I.1. Consumtion return = like F.
 J. usage_giving Darea in folosinta like Delivery E. return the same as F
 
 
+
+!!!!!!!!! in this module is also the code for keeping the value of stock in concordanse with account_moves
+!!!!!!!!!! when you set to draft a journal_entry/bill and then reposting it
+!!!!!!!!!! it has code also for draft/posing landed cost journal entries

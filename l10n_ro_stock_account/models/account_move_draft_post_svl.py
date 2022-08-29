@@ -49,8 +49,8 @@ class AccountMove(models.Model):
                     )
 
                 text_error = (
-                    f"For AccountMove:({move.ref},{move.id}) at "
-                    f"product=({svl.product_id.name},{svl.product_id.id}) "
+                    f"For AccountMove:({move.id}, {move.ref}) at "
+                    f"product=({svl.product_id.id}, {svl.product_id.name}) "
                     f"qty = {svl.quantity}"
                 )
                 accounts = svl.product_id._get_product_accounts()
@@ -94,6 +94,7 @@ class AccountMove(models.Model):
                 #( at draft the initial value is substrcted like it was never put)
                 created_svl = svl.sudo().create(
                     {
+                        "description": "RePosted " + svl.description,
                         "product_id":svl.product_id.id,
                         "account_move_id":move.id,
                         "quantity": 0,
@@ -111,7 +112,59 @@ class AccountMove(models.Model):
                            "unit_cost": (svl.remaining_value + balance)/svl.remaining_qty,
                            })
                 
+            # for stock landed cost reposting the account_move
+            if hasattr(move, "landed_costs_ids"):
+                for line in move.line_ids:
+                    product = line.product_id
+                    accounts = product._get_product_accounts()
+                    if line.account_id != accounts["stock_valuation"]:
+                        continue
+                    before_created_svl = move.stock_valuation_layer_ids.filtered(lambda r: r.l10n_ro_draft_svl_id and r.product_id == product)[0]
+                    text_error = (
+                        f"For Landed Cost AccountMove:({move.id}, {move.ref}) at "
+                        f"product=({product.id}, {product.name}) "
+                        f"balance={line.balance}"
+                    )
+                    if not before_created_svl:
+                        raise UserError(_(text_error +
+                            ", you do not have before created svl that was set to draft (has l10n_ro_draft_svl_id) "
+                                          ))
+                    svl_to_modify = before_created_svl.stock_valuation_layer_id
+                    if not svl_to_modify:
+                        raise UserError(_(text_error+ f"before_created_svl={before_created_svl.id}{before_created_svl.desciption}"
+                                          " does not have stock_valuation_layer_id"))
+                    if not svl_to_modify.remaining_qty:
+                        raise UserError(
+                            _(
+                                text_error
+                                + f" we do not have left any unit of quanty from this product  "
+                                f"svl_to_modify={svl_to_modify}. You can not revalidate the account_mvoe because is going to "
+                                "create value in 3xx but with no product to add the value in stock"
+                                " you can validate the only if you select a account diffrent than "
+                                "product stocK_validation usualy 3xx (and take out the product_id)"
+                            )
+                        )
 
+                    balance = line.balance
+                    created_svl = before_created_svl.sudo().create(
+                        {
+                            "description": "RePosted " + before_created_svl.description,
+                            "product_id":product.id,
+                            "account_move_id":move.id,
+                            "quantity": 0,
+                            "remaining_value": 0,
+                            "value": balance,
+                            "unit_cost": 0,
+                            "company_id": move.company_id.id,
+                            "stock_valuation_layer_id": svl_to_modify.id,
+                            "l10n_ro_bill_accounting_date": move.date,
+    
+                        }
+                    )
+                    svl_to_modify.write({"remaining_value": svl_to_modify.remaining_value + balance,
+                               "l10n_ro_bill_accounting_date": move.date,
+                               "unit_cost": (svl_to_modify.remaining_value + balance)/svl_to_modify.remaining_qty,
+                               })
         res = super().action_post()
 
         return res
@@ -192,7 +245,28 @@ class AccountMove(models.Model):
                                     )
                                 )
                             else:
-                                continue # is a value for stock that is going to be taken into account in next line
+                                if hasattr(svl, "stock_landed_cost_id"):
+                                    # is landed cost, and we are setting to draft the account_move
+                                    # we must create another valuation with oposite value
+                                    svl_to_modify = svl.stock_valuation_layer_id
+                                    if not svl_to_modify.remaining_qty:
+                                        raise UserError(
+                                            _(
+                                                text_error
+                                                + f" svl remaing quantity is zero. Is not posible to set to draft this account_move resulted form LandedCost" 
+                                                + to_do_error
+                                            )
+                                        )
+                                    value =  -1 * svl.value
+                                    svl.copy({"value": value, 
+                                              "l10n_ro_draft_svl_id": svl.id,
+                                              "description":"Draft:"+ svl.description})
+                                    svl_to_modify.write({"remaining_value":svl_to_modify.remaining_value - value,
+                                         "unit_cost":(svl_to_modify.remaining_value - value)/svl_to_modify.remaining_qty if svl_to_modify.remaining_qty else 0} )
+                                    continue
+                                else:                                
+                                    # is a value for stock that is going to be taken into account in next line
+                                    continue 
                         account_move_line_qty = move.line_ids.filtered(lambda r: r.product_id == svl.product_id)[0].quantity
                         if svl.remaining_qty != account_move_line_qty:
                             raise UserError(

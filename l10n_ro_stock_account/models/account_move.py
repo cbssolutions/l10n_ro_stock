@@ -28,11 +28,13 @@ class AccountMove(models.Model):
     @api.constrains("l10n_ro_bill_for_picking", "state","move_type")
     def _check_unique_l10n_ro_bill_for_picking(self):
         for rec in self:
-            if rec.state == "done" and rec.l10n_ro_bill_for_picking and \
-                rec.move_type in ["in_invoice", "in_recepit"]:
+            if rec.state == "done" and rec.l10n_ro_bill_for_picking:
+                if  rec.move_type not in ["in_invoice", "in_recepit"]:
+                    raise ValidationError(_(f"For invoice=({rec.id},{rec.name}) move_type must be 'in_invoice', 'in_recepit' but is {rec.move_type}. You have picking l10n_ro_bill_for_picking=({self.id},{self.name})."))
                 other_inv = self.search([("id", "!=", rec.id),("l10n_ro_bill_for_picking", "==", rec.l10n_ro_bill_for_picking.id)])
                 if other_inv:
                     raise ValidationError(_(f"For invoice=({rec.id},{rec.name}) can only have a invoice per picking l10n_ro_bill_for_picking=({self.id},{self.name}) you have also {other_inv}!"))
+                
 
     def action_view_stock_valuation_layers(self):
         self.ensure_one()
