@@ -13,6 +13,6 @@
         "views/stock_picking_view.xml",
     ],
     "installable": True,
-    "auto_install": True,
+    "auto_install": False,
     "maintainers": ["feketemihai", "dhongu"],
 }
