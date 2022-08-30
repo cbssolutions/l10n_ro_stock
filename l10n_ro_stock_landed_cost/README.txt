@@ -7,6 +7,7 @@ Aditional
 2. if you have a invoice that has landed cost and recived products will put in created landed cost also the coresponding pickings
 3. you have a Reset to Draft button in landed cost that is going to change the state of landed cost and set the journal entry to draft 
 4. keep in sync landed_cost with created journal_entry and svl
+5. raise error if you try to make landed cost on pickings that have svl with remaining_qty=0
 
 future if is not goig to be in another module 3. you can not create landed cost if the inoice is not posted ( did not create the accounting entries)
 
