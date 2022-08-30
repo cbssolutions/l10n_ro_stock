@@ -8,6 +8,7 @@
                     <group>
                         <field name="l10n_ro_valued_type" />
                         <field name="l10n_ro_bill_accounting_date" />
+                        <field name="l10n_ro_location_dest_id" />
                         <field name="l10n_ro_draft_svl_id" />
                         <field name="l10n_ro_draft_svl_ids" widget="many2many_tags" />
                     </group>
@@ -22,8 +23,9 @@
             <field name="create_date" position="after">
                   <field name="l10n_ro_bill_accounting_date" optional="show" />
                   <field name="l10n_ro_valued_type" optional="show" />
-                  <field name="l10n_ro_draft_svl_id" optional="show" />
-                  <field name="l10n_ro_draft_svl_ids" optional="show" widget="many2many_tags" />
+                  <field name="l10n_ro_draft_svl_id" optional="hide" />
+                  <field name="l10n_ro_draft_svl_ids" optional="hide" widget="many2many_tags" />
+                        <field name="l10n_ro_location_dest_id" optional="hide"/>
                   
             </field>
         </field>

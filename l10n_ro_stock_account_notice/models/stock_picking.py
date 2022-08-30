@@ -1,10 +1,11 @@
+# Copyright (C) 2022 cbssolutions.ro
 # Copyright (C) 2014 Forest and Biomass Romania
 # Copyright (C) 2020 NextERP Romania
 # Copyright (C) 2020 Terrabit
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
 
-from odoo import fields, models
-
+from odoo import _, api, fields, models
+from odoo.exceptions import ValidationError
 
 class StockPicking(models.Model):
     _name = "stock.picking"
@@ -27,3 +28,9 @@ class StockPicking(models.Model):
         "have this date for notice, If not will have the today date as it should be",
         tracking=True,
     )
+    
+    @api.constrains("picking_type_id", "l10n_ro_notice")
+    def _check_recursion(self):
+        for rec in self:
+            if rec.l10n_ro_notice and rec.picking_type_id.code not in ["incoming", "outgoing"]:
+                raise ValidationError(_(f'For picking=({rec.id},{rec.name}) you have l10n_ro_notice but picking_type_code={rec.picking_type_code} that is not in ["incoming", "outgoing"]'))

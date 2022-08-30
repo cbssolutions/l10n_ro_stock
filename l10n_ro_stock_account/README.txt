@@ -121,3 +121,8 @@ J. usage_giving Darea in folosinta like Delivery E. return the same as F
 !!!!!!!!! in this module is also the code for keeping the value of stock in concordanse with account_moves
 !!!!!!!!!! when you set to draft a journal_entry/bill and then reposting it
 !!!!!!!!!! it has code also for draft/posing landed cost journal entries
+
+
+l10n_ro_location_dest_id  on stock_valuation_layer is giving you also the value of stock in different locations
+in inventory/reporting/inventory valuation with a filter on remaing_qty and different grouping you can see any stock value that you want
+
