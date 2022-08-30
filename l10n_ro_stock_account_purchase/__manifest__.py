@@ -1,7 +1,7 @@
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
 {
     "name": "Romania - Stock Accounting with Purchase",
-    "version": "14.0.4.0.0",
+    "version": "14.0.1.0.0",
     "category": "Localization",
     "summary": """Romania - Stock Accounting with purchase installed.
     With this module at reception (picking) without notice for romainan company will

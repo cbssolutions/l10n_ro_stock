@@ -19,6 +19,35 @@ In case (not probable) of reciving a invoice that have part of a notice (aviz), 
 
 
  
+ Pretul de achizitie ce este mentionat pe NIR (nota intrare si receptie marfa)este cel de la data primirii bunurilor, respectiv cel de 250 lei / buc. In privinta facturii finale, dupa cum mentionati, aceasta cuprinde un discount (de 10 lei / buc) acordat pe insasi factura de livrare (240 lei in loc de 250 lei). Pretul de vanzare catre client este, probabil, cel putin egal cu cel de achizitie initial, de 250 lei, urmand ca societatea sa castige din discountul primit pe factura finala de la furnizor.
+ 
+Monografia contabila este urmatoarea:
+1) primirea, receptia si inregistrarea bunurilor in gestiune si in contabilitate pe baza deliverz-note-ului si a NIR-ului intocmit de societate:
+
+371 = 408  x buc * 250 lei.
+Nu se efectueaza raportari in D 300 si D 390 si nu se inregistreaza taxarea inversa.
+
+2) vanzare bunuri catre client, pe baza de factura:
+4111 = 707  x buc * 250 lei pret vanzare (cel putin)
+4111 = 4427
+
+si, concomitent, se inregistreaza descarcarea din gestiune a bunurilor vandute:
+607 = 371 x buc * 250 lei.
+
+3) primirea facturii centralizatoare, la finalul lunii:
+408 = 401   valoarea de la punctul 1)
+si inregistrarea discountului primit de la furnizor:
+401 = 609  x buc * 10 lei/buc.
+
+709 = “Reduceri comerciale acordate”
+609 = “Reduceri comerciale primite“
+767 = se foloseste doar atunci cand reducerea e de natura financiara, adica furnizorul accepta, prin contract, sa incaseze mai putin 
+
+ 348 “Diferente de pret la produse”  
+
+665 "Cheltuieli cu diferentele de curs valutar"
+765 "Venituri din diferente de curs valutar"
+ 
 It will create a landed cost with a "Price Difference" product available in the configuration.
 Primirea marfurilor pe baza de aviz de insotire:
 371 = 408       300.000 lei

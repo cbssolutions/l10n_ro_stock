@@ -3,8 +3,11 @@
 # Copyright (C) 2020 Terrabit
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
 
+from collections import defaultdict
 import logging
 from odoo import _, api, models, fields
+from odoo.exceptions import ValidationError
+from enterprise.stock_enterprise.report.report_stock_quantity import ReportStockQuantity
 
 _logger = logging.getLogger(__name__)
 
@@ -33,15 +36,68 @@ class AccountMove(models.Model):
         tracking=1,
     )
 
+    @api.constrains("l10n_ro_bill_for_picking","line_ids", "l10n_ro_bill_for_pickings_ids", "l10n_ro_invoice_for_pickings_ids")
+    def _check_pickings(self):
+        for rec in self:
+            if rec.l10n_ro_bill_for_picking and (rec.l10n_ro_bill_for_pickings_ids or rec.l10n_ro_invoice_for_pickings_ids):
+                raise ValidationError(_(f"For invoice/bill=({rec.id},{rec.name}) you must choose to be for a picking or for notice pickings not both."))
+            if rec.l10n_ro_bill_for_pickings_ids and rec.l10n_ro_invoice_for_pickings_ids:
+                raise ValidationError(_(f"For invoice/bill=({rec.id},{rec.name}) you can not have in same time l10n_ro_invoice_for_pickings_ids and l10n_ro_bill_for_pickings_ids."))
+            if (rec.l10n_ro_bill_for_pickings_ids or rec.l10n_ro_invoice_for_pickings_ids) and rec.invoice_line_ids:
+                products = self.env["product.product"]
+                for line in rec.invoice_line_ids:
+                    product = line.product_id
+                    if product.type == "product" and product.valuation == "real_time":
+                        if product in products:
+                            raise ValidationError(_(f"For invoice/bill=({rec.id},{rec.name}) because you have notice pickings, you can not have more lines of same product. Duplicate product=({product.id},{product.name}) "))
+                        products |= product
+
     @api.onchange("l10n_ro_bill_for_pickings_ids", "l10n_ro_invoice_for_pickings_ids")
     def _onchange_l10n_ro_for_pickings(self):
         if self.invoice_line_ids and (self.l10n_ro_bill_for_pickings_ids or self.l10n_ro_invoice_for_pickings_ids):
-           return {
-                'warning': {'title': _('Warning'), 'message': _('By having bill/invoice_for_pickings_ids is expected that products to have 408 418 accounts. If is the case change manualy the accounts at products ( or enter again the invoice_lines). '),},
+            self.invoice_line_ids = False
+            return {
+                'warning': {'title': _('Warning'), 'message': _('By having bill/invoice_for_pickings_ids is expected that products to have 408 418 accounts. The account_move_lines were deleted because should be other accounts and eventually price difference. '),},
                }
+    def action_post(self):
+        # we are adding lines to corect the notice pickings
+        res = super().action_post()
+        for rec in self:
+            pickings = rec.l10n_ro_bill_for_pickings_ids
+            if pickings:
+                lines = rec.invoice_line_ids
+                svls = pickings.stock_valuation_layer_ids
+                # a product can be in more pickings. we are adding qty and values
+                product_qty_value_svls = defaultdict(lambda: {'qty':0, 'value':0, 'account_id':False})
+                for svl in svls:
+                    product_qty_value_svls[svl.product_id]['qty'] += svl.quantity
+                    product_qty_value_svls[svl.product_id]['value'] += svl.value
+                    if svl.account_move_id != "posted":
+                        raise ValidationError(_(f"For Bill=({rec.id,rec.name}), with l10n_ro_bill_for_pickings_ids={l10n_ro_bill_for_pickings_ids} for product=({product.id, product.name}) "
+                                                f"for svl={svl} you have account_move={svl.account_move_id} that is not posted"))
+                    else:
+                        credit_account = svl.account_move_id.line_ids.filtered(lambda r: r.product_id == svl.product and r.credit != 0)
+                        if product_qty_value_svls[svl.product_id]['account_id'] and \
+                            product_qty_value_svls[svl.product_id]['account_id'] != credit_account:
+                            raise ValidationError(_(f"For Bill=({rec.id,rec.name}), with l10n_ro_bill_for_pickings_ids={l10n_ro_bill_for_pickings_ids} for product=({product.id, product.name}) "
+                                                    f"for svl={svl} you have account={credit_account} that is diffrent than in another svl form pickings"))
+                        else:    
+                            product_qty_value_svls[svl.product_id]['account_id'] += credit_account
+                for product, qty_value in  product_qty_value_svls.items():
+                    product_line = lines.filtered(lambda r: r.product_id == product)
+                    if len(product_line) != 1:
+                        raise ValidationError(_(f"For Bill=({rec.id,rec.name}), with l10n_ro_bill_for_pickings_ids={l10n_ro_bill_for_pickings_ids} for product=({product.id, product.name}) you do not have one invoice line product_line={product_line}."))
+                    if product_line.quantity != qty_value['qty']:
+                        raise ValidationError(_(f"For Bill=({rec.id,rec.name}), with l10n_ro_bill_for_pickings_ids={l10n_ro_bill_for_pickings_ids} for product=({product.id, product.name}) you do invoice line qty={product_line.quantity} that is diffrent than pickings_qty={qty_value['qty']}"))
+                    if value 
+            if rec.l10n_ro_invoice_for_pickings_ids:
+                pass
+                #valuated_products = rec.invoice_line_ids.product_ids.filtered(lambda r:)
+        return res
              
     
     def _get_reception_account(self):
+        # what the hell is doing this?
         self.ensure_one()
         account = self.env["account.account"]
         if not self.is_l10n_ro_record:
@@ -72,7 +128,3 @@ class AccountMove(models.Model):
                 account = lines_diff_acc[0]
         return account
 
-    def _stock_account_prepare_anglo_saxon_in_lines_vals(self):
-        if self.is_l10n_ro_record:
-            return []
-        return super()._stock_account_prepare_anglo_saxon_in_lines_vals()
