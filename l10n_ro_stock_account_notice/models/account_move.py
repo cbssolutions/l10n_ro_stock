@@ -1,3 +1,4 @@
+# Copyright (C) 2022 cbssolutions.ro
 # Copyright (C) 2022 NextERP Romania
 # Copyright (C) 2020 Terrabit
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
@@ -10,25 +11,7 @@ _logger = logging.getLogger(__name__)
 
 
 class AccountMove(models.Model):
-    _name = "account.move"
-    _inherit = ["account.move", "l10n.ro.mixin"]
-
-    def is_reception_notice(self):
-        self.ensure_one()
-        if not self.is_l10n_ro_record:
-            return False
-
-        purchases = self.line_ids.mapped("purchase_line_id.order_id")
-        picking_notice = self.env["stock.picking"].search(
-            [
-                ("id", "in", purchases.mapped("picking_ids").ids),
-                ("state", "=", "done"),
-                ("notice", "=", True),
-            ]
-        )
-        if picking_notice:
-            return True
-        return False
+    _inherit = "account.move"
 
     def l10n_ro_get_reception_account(self):
         self.ensure_one()

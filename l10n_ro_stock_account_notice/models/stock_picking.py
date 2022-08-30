@@ -8,8 +8,7 @@ from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 
 class StockPicking(models.Model):
-    _name = "stock.picking"
-    _inherit = ["stock.picking", "l10n.ro.mixin"]
+    _inherit = "stock.picking"
 
     # Prin acest camp se indica daca un produs care e stocabil trece prin
     # contul 408 / 418 la achizitie sau vanzare
@@ -19,18 +18,19 @@ class StockPicking(models.Model):
         states={"done": [("readonly", True)], "cancel": [("readonly", True)]},
         default=False,
         help="With this field the reception/delivery is set as a notice. "
-        "The generated account move will contain accounts 408/418.",
+        "With this field set, at reception you can set the value of received products."
+        "At post will create a account_move with accounts 408/418.",
     )
     l10n_ro_accounting_date = fields.Datetime(
         "Accounting Date",
         copy=False,
         help="If this field is set, the svl and accounting entiries will "
-        "have this date for notice, If not will have the today date as it should be",
+        "have this date, If not will have the today date.",
         tracking=True,
     )
     
     @api.constrains("picking_type_id", "l10n_ro_notice")
-    def _check_recursion(self):
+    def _check_picking_type_code_notice(self):
         for rec in self:
             if rec.l10n_ro_notice and rec.picking_type_id.code not in ["incoming", "outgoing"]:
                 raise ValidationError(_(f'For picking=({rec.id},{rec.name}) you have l10n_ro_notice but picking_type_code={rec.picking_type_code} that is not in ["incoming", "outgoing"]'))

@@ -1,3 +1,4 @@
+# Copyright (C) 2022 cbssolutions.ro
 # Copyright (C) 2014 Forest and Biomass Romania
 # Copyright (C) 2022 NextERP Romania
 # Copyright (C) 2020 Terrabit

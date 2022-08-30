@@ -11,8 +11,7 @@ _logger = logging.getLogger(__name__)
 
 
 class ProductTemplate(models.Model):
-    _name = "product.template"
-    _inherit = ["product.template", "l10n.ro.mixin"]
+    _inherit = "product.template"
 
     def _get_product_accounts(self):
         accounts = super(ProductTemplate, self)._get_product_accounts()

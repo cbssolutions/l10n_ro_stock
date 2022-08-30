@@ -12,8 +12,7 @@ _logger = logging.getLogger(__name__)
 
 
 class StockMove(models.Model):
-    _name = "stock.move"
-    _inherit = ["stock.move", "l10n.ro.mixin"]
+    _inherit = "stock.move"
 
     l10n_ro_notice = fields.Boolean(
         related="picking_id.l10n_ro_notice",
@@ -70,8 +69,6 @@ class StockMove(models.Model):
         return it_is
 
     def _create_reception_notice_svl(self, forced_quantity=None):
-        # 2022 alex: at notice reception we need to make a journal entry
-        # with the value from notice
         created_svl_ids = self.env["stock.valuation.layer"]
         for move in self.with_context(standard=True, valued_type="reception_notice"):
 
@@ -133,7 +130,7 @@ class StockMove(models.Model):
             account_move.action_post()
             svl = self.env["stock.valuation.layer"].create(
                 {
-                    "description": f"Notce reception picking=({picking.name},{picking.id})",
+                    "description": f"Notice reception picking=({picking.name},{picking.id})",
                     "account_move_id": account_move.id,
                     "stock_move_id": move.id,
                     "product_id": move.product_id.id,

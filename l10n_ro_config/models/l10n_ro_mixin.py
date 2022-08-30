@@ -11,7 +11,7 @@ class L10nRoMixin(models.AbstractModel):
     is_l10n_ro_record = fields.Boolean(
         string="Is Romanian Record",
         compute="_compute_is_l10n_ro_record",
-        readonly=False,
+        readonly=True,
     )
 
     # without depends is not being computed or fired in onchange
