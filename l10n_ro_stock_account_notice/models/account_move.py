@@ -4,8 +4,7 @@
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
 
 import logging
-
-from odoo import models
+from odoo import _, api, models, fields
 
 _logger = logging.getLogger(__name__)
 
@@ -13,7 +12,36 @@ _logger = logging.getLogger(__name__)
 class AccountMove(models.Model):
     _inherit = "account.move"
 
-    def l10n_ro_get_reception_account(self):
+    # we created 2 fields to be more clear in fields and at selection without so much code
+    l10n_ro_invoice_for_pickings_ids = fields.One2many(
+        "stock.picking","l10n_ro_notice_invoice_id",
+        help="If this field is set,means that this is the invoice "
+        "for set notice pickings. A notice picking can be invoiced only on one invoice!",
+        string = "For notice delivery pickings",
+        readonly=0,
+        copy=0,
+        tracking=1,
+    )
+
+    l10n_ro_bill_for_pickings_ids = fields.One2many(
+        "stock.picking","l10n_ro_notice_bill_id",
+        string = "For notice reception pickings",
+        help="If this field is set,means that this is the bill "
+        "for set notice pickings. A notice picking can be billed only on one bill!",
+        readonly=0,
+        copy=0,
+        tracking=1,
+    )
+
+    @api.onchange("l10n_ro_bill_for_pickings_ids", "l10n_ro_invoice_for_pickings_ids")
+    def _onchange_l10n_ro_for_pickings(self):
+        if self.invoice_line_ids and (self.l10n_ro_bill_for_pickings_ids or self.l10n_ro_invoice_for_pickings_ids):
+           return {
+                'warning': {'title': _('Warning'), 'message': _('By having bill/invoice_for_pickings_ids is expected that products to have 408 418 accounts. If is the case change manualy the accounts at products ( or enter again the invoice_lines). '),},
+               }
+             
+    
+    def _get_reception_account(self):
         self.ensure_one()
         account = self.env["account.account"]
         if not self.is_l10n_ro_record:

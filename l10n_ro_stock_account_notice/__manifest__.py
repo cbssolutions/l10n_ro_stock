@@ -12,6 +12,7 @@
     "license": "AGPL-3",
     "data": [
         "views/stock_picking_view.xml",
+        "views/account_move_views.xml",
     ],
     "installable": True,
     "auto_install": False, # not all companies are using notce (cumpara pe aviz)

@@ -21,10 +21,9 @@
         "views/stock_location_view.xml",
         "views/stock_picking_view.xml",
         "views/stock_valuation_layer_views.xml",
-        "wizard/stock_picking_return_views.xml",
+#        "wizard/stock_picking_return_views.xml",  not necessary anymore
         "views/account_move_views.xml",
     ],
-#    "pre_init_hook": "pre_init_hook",
     "installable": True,
     "maintainers": ["dev@cbssolutions.ro"],
 }

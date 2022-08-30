@@ -1,3 +1,4 @@
+# Copyright (C) 2022 cbssolutions.ro
 # Copyright (C) 2014 Forest and Biomass Romania
 # Copyright (C) 2020 NextERP Romania
 # Copyright (C) 2020 Terrabit
@@ -271,7 +272,7 @@ class StockMove(models.Model):
     def _l10n_ro_get_sale_amount(self):
         valuation_amount = 0
         sale_line = self.sale_line_id
-        if sale_line and sale_line.product_uom_qty:
+        if sale_line and salvalued_typee_line.product_uom_qty:
             price_invoice = sale_line.price_subtotal / sale_line.product_uom_qty
             price_invoice = sale_line.product_uom._compute_price(
                 price_invoice, self.product_uom

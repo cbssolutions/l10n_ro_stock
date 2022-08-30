@@ -28,6 +28,12 @@ class StockPicking(models.Model):
         "have this date, If not will have the today date.",
         tracking=True,
     )
+
+    # we created 2 fields to be more clear in fields and at selection without so much code
+    l10n_ro_notice_invoice_id = fields.Many2one("account.move", readonly=1, 
+        help="This notice picking was invoiced in this invoice")
+    l10n_ro_notice_bill_id = fields.Many2one("account.move", readonly=1, 
+        help="This notice picking was billed in this bill")
     
     @api.constrains("picking_type_id", "l10n_ro_notice")
     def _check_picking_type_code_notice(self):

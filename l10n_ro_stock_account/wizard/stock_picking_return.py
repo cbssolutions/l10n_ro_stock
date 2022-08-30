@@ -1,11 +1,14 @@
+# Copyright (C) 2022 cbssolutions.ro          
 # Copyright (C) 2021 NextERP Romania
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
 from odoo import api, fields, models
 
-
+#!!!!!!!!!!!!! NOT USED ANYMORE !!!!!!!!!!!!!!!!!
 class StockReturnPickingLine(models.TransientModel):
     _inherit = "stock.return.picking.line"
     # in version before used to show a warning about svl difference
+    # not used  because is no more the case
+    # maybe in future to signal that something can be wrong
 
     origin_ret_move_qty_check = fields.Boolean(compute="_compute_origin_ret_move_qty")
     origin_ret_move_qty = fields.Float(compute="_compute_origin_ret_move_qty")
