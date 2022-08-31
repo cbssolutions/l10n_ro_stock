@@ -4,13 +4,15 @@
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
 
 import logging
-from odoo import models
+from odoo import fields, models
 
 _logger = logging.getLogger(__name__)
 
 
 class AccountMoveLine(models.Model):
     _inherit = "account.move.line"
+
+    l10n_ro_notice_invoice_difference = fields.Boolean(help="Used to know that are notice-invoice price differences. Used at validation and setting to draft")
 
     def _get_computed_account(self):
         # triggered at onchange of product_id invoice/bill line creation

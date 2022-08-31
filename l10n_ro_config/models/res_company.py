@@ -93,6 +93,7 @@ class ResCompany(models.Model):
         "for the price difference between picking and bill",
     )
 
+# cbssolution.ro fields for l10n_ro_stock_account...:
     l10n_ro_property_bill_to_receive = fields.Many2one(
         "account.account",
         string="Bills to recive normally 408",
@@ -103,6 +104,47 @@ class ResCompany(models.Model):
         string="Invoices to create normally 418",
         readonly=False,
     )
+    # 709 = “Reduceri comerciale acordate”
+    # 609 = “Reduceri comerciale primite“
+    # 767 = se foloseste doar atunci cand reducerea e de natura financiara, adica furnizorul accepta, prin contract, sa incaseze mai putin 
+    # 348 “Diferente de pret la produse”  
+
+    # vendors bills for notice reception
+    l10n_ro_property_notice_bill_positive = fields.Many2one(
+        "account.account",
+        string="Positive difference between notice reception and bill. Usualy 609",
+        readonly=False,
+    )
+    l10n_ro_property_notice_bill_negative = fields.Many2one(
+        "account.account",
+        string="Negative difference between notice reception and bill. Should not exist but can be 348",
+        readonly=False,
+    )
+    # client invoices for notice deliveries
+    l10n_ro_property_notice_invoice_positive = fields.Many2one(
+        "account.account",
+        string="Positive difference between notice delivery and bill. Usualy 709",
+        readonly=False,
+    )
+    l10n_ro_property_notice_invoice_negative = fields.Many2one(
+        "account.account",
+        string="Negative difference between invoice delivery and bill. Should not exist but can be 348",
+        readonly=False,
+    )
+    # if the bill/invoice is in other currency than the company, the differences will be considerd form exchange rate
+    # 665 "Cheltuieli cu diferentele de curs valutar"
+    # 765 "Venituri din diferente de curs valutar"
+    l10n_ro_property_revenues_from_exchange_rate = fields.Many2one(
+        "account.account",
+        string="Usualy 765",
+        readonly=False,
+    )
+    l10n_ro_property_expensed_from_exchange_rate = fields.Many2one(
+        "account.account",
+        string="Usualy 665",
+        readonly=False,
+    )
+# /cbssolution.ro fields for l10n_ro_stock_account...:
 
     def _check_is_l10n_ro_record(self, company=False):
         if not company:

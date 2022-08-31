@@ -11,6 +11,7 @@
                         <field name="l10n_ro_location_dest_id" />
                         <field name="l10n_ro_draft_svl_id" />
                         <field name="l10n_ro_draft_svl_ids" widget="many2many_tags" />
+                        <filed name="l10n_ro_modified_value" />
                     </group>
                 </page>
             </notebook>

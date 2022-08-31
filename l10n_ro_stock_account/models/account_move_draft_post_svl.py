@@ -111,6 +111,7 @@ class AccountMove(models.Model):
                 svl.write({"remaining_value": svl.remaining_value + balance,
                            "l10n_ro_bill_accounting_date": move.date,
                            "unit_cost": (svl.remaining_value + balance)/svl.remaining_qty,
+                           "l10n_ro_modified_value":balance, # used in l10n_ro_stock_picing
                            })
                 
             # for stock landed cost reposting the account_move

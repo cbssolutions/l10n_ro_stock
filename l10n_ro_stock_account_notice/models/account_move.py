@@ -44,7 +44,7 @@ class AccountMove(models.Model):
                 raise ValidationError(_(f"For invoice/bill=({rec.id},{rec.name}) you can not have in same time l10n_ro_invoice_for_pickings_ids and l10n_ro_bill_for_pickings_ids."))
             if (rec.l10n_ro_bill_for_pickings_ids or rec.l10n_ro_invoice_for_pickings_ids) and rec.invoice_line_ids:
                 products = self.env["product.product"]
-                for line in rec.invoice_line_ids:
+                for line in rec.invoice_line_ids.filtered(lambda r: not r.l10n_ro_notice_invoice_difference):
                     product = line.product_id
                     if product.type == "product" and product.valuation == "real_time":
                         if product in products:
@@ -60,7 +60,6 @@ class AccountMove(models.Model):
                }
     def action_post(self):
         # we are adding lines to corect the notice pickings
-        res = super().action_post()
         for rec in self:
             pickings = rec.l10n_ro_bill_for_pickings_ids
             if pickings:
@@ -70,7 +69,12 @@ class AccountMove(models.Model):
                 product_qty_value_svls = defaultdict(lambda: {'qty':0, 'value':0, 'account_id':False})
                 for svl in svls:
                     product_qty_value_svls[svl.product_id]['qty'] += svl.quantity
-                    product_qty_value_svls[svl.product_id]['value'] += svl.value
+                    if svl.l10n_ro_modified_value:
+                        # case when notice svl was modified
+                        value = svl.l10n_ro_modified_value
+                    else:
+                        value = svl.value
+                    product_qty_value_svls[svl.product_id]['value'] += value
                     if svl.account_move_id.state != "posted":
                         raise ValidationError(_(f"For Bill=({rec.id,rec.name}), with l10n_ro_bill_for_pickings_ids={rec.l10n_ro_bill_for_pickings_ids} for product=({svl.product_id.id, svl.product_id.name}) "
                                                 f"for svl={svl} you have account_move={svl.account_move_id} that is not posted"))
@@ -94,35 +98,47 @@ class AccountMove(models.Model):
                     if not invoice_notice_diff:
                         continue
                     if rec.currency_id != rec.company_id.currency_id:
-# 665 "Cheltuieli cu diferentele de curs valutar"
-# 765 "Venituri din diferente de curs valutar"
-                        negative_dif_acc = 765
-                        positive_dif_acc = 665
+                        # 665 "Cheltuieli cu diferentele de curs valutar"
+                        # 765 "Venituri din diferente de curs valutar"
+                        negative_dif_acc = rec.company_id.l10n_ro_property_revenues_from_exchange_rate
+                        positive_dif_acc = rec.company_id.l10n_ro_property_expensed_from_exchange_rate
                     else:
-# 609 = “Reduceri comerciale primite“
-# 348 “Diferente de pret la produse”  
-                        negative_dif_acc = 609
-                        positive_dif_acc = 384
+                        # 609 = “Reduceri comerciale primite“
+                        # 348 “Diferente de pret la produse”  
+                        # l10n_ro_property_notice_invoice_positive = fields.Many2one(
+                        # l10n_ro_property_notice_invoice_negative = fields.Many2one(
+                        negative_dif_acc = rec.company_id.l10n_ro_property_notice_bill_positive
+                        positive_dif_acc = rec.company_id.l10n_ro_property_notice_bill_negative
                     account = positive_dif_acc if invoice_notice_diff >0 else negative_dif_acc
-
+                    if not account:
+                        raise ValidationError(_(f"For Bill=({rec.id,rec.name}), with "
+                            f"l10n_ro_bill_for_pickings_ids={rec.l10n_ro_bill_for_pickings_ids}"
+                            f" for product=({product.id, product.name}) you have invoice"
+                            f"_value-notice_value={invoice_notice_diff}. "
+                            "You not not have set the difference account. "
+                            "Go to Settings/General Settings"
+                            "/Romanaia & set the account."))
                     # this is doing another acount_move. why the hell?
                     rec.write({"line_ids":[(0,0,{
-                        'name': "difference product xxx",
+                        'name': f"Difference product={product.id,product.name} invoice-notice={invoice_notice_diff}",
                         'debit':invoice_notice_diff if invoice_notice_diff > 0 else 0,
-                        'credit': invoice_notice_diff if invoice_notice_diff < 0 else 0,
+                        'credit': abs(invoice_notice_diff) if invoice_notice_diff < 0 else 0,
                         'product_id': product.id,
-                        'account_id':account,
+                        'account_id':account.id,
+                        "l10n_ro_notice_invoice_difference":True,
                         }), (0,0,{
-                        'name': "difference product yyy",
+                        'name': f"Difference product={product.id,product.name} invoice-notice={invoice_notice_diff}",
                         'credit':invoice_notice_diff if invoice_notice_diff > 0 else 0,
-                        'debit': invoice_notice_diff if invoice_notice_diff < 0 else 0 ,
+                        'debit': abs(invoice_notice_diff) if invoice_notice_diff < 0 else 0 ,
                         'product_id': product.id,                            
-                        'account_id':qty_value["account_id"],
+                        'account_id':qty_value["account_id"].id,
+                        "l10n_ro_notice_invoice_difference":True,
                         })]})
                     
             if rec.l10n_ro_invoice_for_pickings_ids:
                 pass
                 #valuated_products = rec.invoice_line_ids.product_ids.filtered(lambda r:)
+        res = super().action_post()
         return res
              
     

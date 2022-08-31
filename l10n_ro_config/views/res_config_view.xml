@@ -359,7 +359,6 @@
                                             name="l10n_ro_property_trade_discount_granted_account_id"
                                         />
                                     </div>
-                                </div>
 
                                     <div class="row mt16">
                                         <label
@@ -372,7 +371,7 @@
                                         />
                                     </div>
 
-
+<!-- cbssolutions.ro -->
                                     <div class="row mt16">
                                         <label
                                             for="l10n_ro_property_bill_to_receive"
@@ -394,8 +393,73 @@
                                             placeholder="Select a account 418"
                                         />
                                     </div>
+                                    <div class="row mt16">
+                                        <label
+                                            for="l10n_ro_property_notice_bill_positive"
+                                            class="col-lg-3 o_light_label"
+                                        />
+                                        <field
+                                            name="l10n_ro_property_notice_bill_positive"
+                                            placeholder="Select a account 609"
+                                        />
+                                    </div>
+                                    <div class="row mt16"
+                                        title="Is recomanded to let it empty to rise error"
+                                    >
+                                        <label
+                                            for="l10n_ro_property_notice_bill_negative"
+                                            class="col-lg-3 o_light_label"
+                                        />
+                                        <field
+                                            name="l10n_ro_property_notice_bill_negative"
+                                            placeholder="Should not exist. 348"
+                                        />
+                                    </div>
+                                    <div class="row mt16">
+                                        <label
+                                            for="l10n_ro_property_notice_invoice_positive"
+                                            class="col-lg-3 o_light_label"
+                                        />
+                                        <field
+                                            name="l10n_ro_property_notice_invoice_positive"
+                                            placeholder="Select 709"
+                                        />
+                                    </div>
+                                    <div class="row mt16"
+                                        title="Is recomanded to let it empty to rise error"
+                                    >
+                                        <label
+                                            for="l10n_ro_property_notice_invoice_negative"
+                                            class="col-lg-3 o_light_label"
+                                        />
+                                        <field
+                                            name="l10n_ro_property_notice_invoice_negative"
+                                            placeholder="Should not exist. 348"
+                                        />
+                                    </div>
+                                    <div class="row mt16">
+                                        <label
+                                            for="l10n_ro_property_revenues_from_exchange_rate"
+                                            class="col-lg-3 o_light_label"
+                                        />
+                                        <field
+                                            name="l10n_ro_property_revenues_from_exchange_rate"
+                                            placeholder="Select 765"
+                                        />
+                                    </div>
+                                    <div class="row mt16">
+                                        <label
+                                            for="l10n_ro_property_expensed_from_exchange_rate"
+                                            class="col-lg-3 o_light_label"
+                                        />
+                                        <field
+                                            name="l10n_ro_property_expensed_from_exchange_rate"
+                                            placeholder="Select 665"
+                                        />
+                                    </div>
+<!-- /cbssolutions.ro -->
 
-                                    
+                                </div>                            
 
                                 
                             </div>

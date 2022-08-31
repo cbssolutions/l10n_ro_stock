@@ -103,7 +103,7 @@ class ResConfigSettings(models.TransientModel):
         related="company_id.l10n_ro_property_stock_price_difference_product_id",
         readonly=False,
     )
-
+    # cbssolutions.ro
     l10n_ro_property_bill_to_receive = fields.Many2one(
         "account.account",
         related="company_id.l10n_ro_property_bill_to_receive",
@@ -114,6 +114,37 @@ class ResConfigSettings(models.TransientModel):
         related="company_id.l10n_ro_property_invoice_to_create",
         readonly=False,
     )
+    l10n_ro_property_notice_bill_positive = fields.Many2one(
+        "account.account",
+        related="company_id.l10n_ro_property_notice_bill_positive",
+        readonly=False,
+    )
+    l10n_ro_property_notice_bill_negative = fields.Many2one(
+        "account.account",
+        related="company_id.l10n_ro_property_notice_bill_negative",
+        readonly=False,
+    )
+    l10n_ro_property_notice_invoice_positive = fields.Many2one(
+        "account.account",
+        related="company_id.l10n_ro_property_notice_invoice_positive",
+        readonly=False,
+    )
+    l10n_ro_property_notice_invoice_negative = fields.Many2one(
+        "account.account",
+        related="company_id.l10n_ro_property_notice_invoice_negative",
+        readonly=False,
+    )
+    l10n_ro_property_revenues_from_exchange_rate = fields.Many2one(
+        "account.account",
+        related="company_id.l10n_ro_property_revenues_from_exchange_rate",
+        readonly=False,
+    )
+    l10n_ro_property_expensed_from_exchange_rate = fields.Many2one(
+        "account.account",
+        related="company_id.l10n_ro_property_expensed_from_exchange_rate",
+        readonly=False,
+    )
+    # /cbssolutions.ro
 
     module_currency_rate_update_RO_BNR = fields.Boolean(
         "Currency Rate Update BNR",
