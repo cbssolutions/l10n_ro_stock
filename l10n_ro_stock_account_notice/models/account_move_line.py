@@ -14,6 +14,7 @@ class AccountMoveLine(models.Model):
 
     l10n_ro_notice_invoice_difference = fields.Boolean(help="Used to know that are notice-invoice price differences. Used at validation and setting to draft")
 
+
     def _get_computed_account(self):
         # triggered at onchange of product_id invoice/bill line creation
         # gives the account 408 or 418 if the product is in notice_pickings_ids

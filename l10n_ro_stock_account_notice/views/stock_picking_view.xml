@@ -41,7 +41,7 @@
                 <field
                     name="price_unit"
                     attrs="{'invisible': ['|', '|',
-                    ('picking_code','!=','incoming'),
+                    ('picking_code','not in',['incoming','outgoing']),
                      ('is_l10n_ro_record', '=', False),
                      ('l10n_ro_notice', '=', False)
                      ]}"

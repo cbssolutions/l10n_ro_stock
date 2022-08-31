@@ -1,9 +1,4 @@
 # Copyright (C) 2022 cbssolutions.ro
-# Copyright (C) 2014 Forest and Biomass Romania
-# Copyright (C) 2020 NextERP Romania
-# Copyright (C) 2020 Terrabit
-# License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
-
 import logging
 
 from odoo import _, api, fields, models
@@ -13,19 +8,12 @@ _logger = logging.getLogger(__name__)
 
 
 class StockMove(models.Model):
-    _inherit = "stock.move"
-
+    _inherit = "stock.move.line"
+    
     l10n_ro_notice = fields.Boolean(
         related="picking_id.l10n_ro_notice",
         help="field form picking, just to be used in view",
     )
-
-    @api.onchange("product_id","product_uom_qty")
-    def _onchange_product_id(self):
-        "if delivery notice we are going to put the price for partner"
-        if self.is_l10n_ro_record and self.picking_id.l10n_ro_notice and self.product_id:
-            # maybe in context with partner ..
-            self.price_unit = self.product_id.with_company(self.company_id).lst_price
 
     @api.model
     def _get_valued_types(self):
