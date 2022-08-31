@@ -14,6 +14,7 @@ class AccountMove(models.Model):
     _inherit = "account.move"
         
     def button_draft(self):
+        res = super().button_draft()
         for move in self:
             if (
                 move.is_l10n_ro_record
@@ -30,4 +31,6 @@ class AccountMove(models.Model):
                           "First set to draft that bill (it contains diffrence between notice value and bill value)."
                         )
                     )
-        return super().button_draft()
+                # at setting to draft we are deleting the diferences because will be recomputed at post
+                move.line_ids.filtered(lambda r:r.l10n_ro_notice_invoice_difference).unlink()
+        return res

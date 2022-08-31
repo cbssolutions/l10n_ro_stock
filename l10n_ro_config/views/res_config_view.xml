@@ -341,7 +341,7 @@
                                             placeholder="Select 482"
                                         />
                                     </div>
-                                    <div class="row mt16">
+<!--  cbssolutions.ro not used                                  <div class="row mt16">
                                         <label
                                             for="l10n_ro_property_trade_discount_received_account_id"
                                             class="col-lg-3 o_light_label"
@@ -359,7 +359,7 @@
                                             name="l10n_ro_property_trade_discount_granted_account_id"
                                         />
                                     </div>
-
+-->
                                     <div class="row mt16">
                                         <label
                                             for="l10n_ro_property_stock_price_difference_product_id"

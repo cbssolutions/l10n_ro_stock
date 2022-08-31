@@ -24,7 +24,6 @@ class AccountMove(models.Model):
         copy=0,
         tracking=1,
     )
-
     l10n_ro_bill_for_pickings_ids = fields.One2many(
         "stock.picking","l10n_ro_notice_bill_id",
         string = "For notice reception pickings",
@@ -63,6 +62,7 @@ class AccountMove(models.Model):
         for rec in self:
             pickings = rec.l10n_ro_bill_for_pickings_ids
             if pickings:
+                # bills for notice reception pickings
                 lines = rec.invoice_line_ids
                 svls = pickings.move_lines.stock_valuation_layer_ids
                 # a product can be in more pickings. we are adding qty and values
@@ -126,6 +126,7 @@ class AccountMove(models.Model):
                         'product_id': product.id,
                         'account_id':account.id,
                         "l10n_ro_notice_invoice_difference":True,
+                        "exclude_from_invoice_tab":True,
                         }), (0,0,{
                         'name': f"Difference product={product.id,product.name} invoice-notice={invoice_notice_diff}",
                         'credit':invoice_notice_diff if invoice_notice_diff > 0 else 0,
@@ -133,6 +134,7 @@ class AccountMove(models.Model):
                         'product_id': product.id,                            
                         'account_id':qty_value["account_id"].id,
                         "l10n_ro_notice_invoice_difference":True,
+                        "exclude_from_invoice_tab":True,
                         })]})
                     
             if rec.l10n_ro_invoice_for_pickings_ids:
