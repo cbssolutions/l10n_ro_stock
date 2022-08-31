@@ -178,7 +178,50 @@ class StockMove(models.Model):
                     .stock_valuation_layer_ids.filtered(lambda sv: sv.remaining_qty > 0)
                     .ids
                 )
-            svl += move._create_out_svl(forced_quantity)
+            created_svl = move._create_out_svl(forced_quantity)
+            # we must also create a account_move for what was returned
+            picking = move.picking_id
+            product = created_svl.product_id
+            accounts = product._get_product_accounts()
+            accoutns2 = move._get_accounting_data_for_valuation()
+            created_account_move = self.env["account.move"].create(
+                {
+                    "date": move.date,
+                    "ref": f"Return for notice_reception picking=({picking.name},{picking.id}), product={product.id,product.name}",
+                    "journal_id": accoutns2[0],
+                    "line_ids": [
+                        (
+                            0,
+                            0,
+                            {
+                                "account_id": accounts["stock_valuation"].id,  # 3xx
+                                "product_id": product.id,
+                                "name": "Return for notice_reception" + f" qty={created_svl.quantity} value={created_svl.value}",
+                                "quantity": created_svl.quantity,
+                                "debit": 0,
+                                "credit": abs(created_svl.value),
+                            },
+                        ),
+                        (
+                            0,
+                            0,
+                            {
+                                "account_id": accounts["income"].id, # 7xx
+                                "product_id": product.id,
+                                "name": "Return for notice_reception" + f" qty={created_svl.quantity} value={created_svl.value}",
+                                "quantity": created_svl.quantity,
+                                "debit": abs(created_svl.value),
+                                "credit": 0,
+                            },
+                        ),
+                    ],
+                }
+            )
+            created_account_move.action_post()
+            created_svl.account_move_id = created_account_move.id
+            svl += created_svl
+
+            
         return svl
 
     def _is_delivery(self):
