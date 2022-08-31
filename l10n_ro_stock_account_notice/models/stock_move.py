@@ -102,7 +102,7 @@ class StockMove(models.Model):
                         "Go to Settings/config/romania and set the property bill to receive to 408."
                     )
                 )
-            account_move = self.env["account.move"].create(
+            account_move = self.env["account.move"].sudo().create(
                 {
                     "date": date,
                     "ref": f"Reception Notice for picking=({picking.name},{picking.id}), product={product.id,product.name}",
@@ -191,7 +191,7 @@ class StockMove(models.Model):
             product = created_svl.product_id
             accounts = product._get_product_accounts()
             accoutns2 = move._get_accounting_data_for_valuation()
-            created_account_move = self.env["account.move"].create(
+            created_account_move = self.env["account.move"].sudo().create(
                 {
                     "date": move.date,
                     "ref": f"Return for notice_reception picking=({picking.name},{picking.id}), product={product.id,product.name}",
@@ -265,8 +265,109 @@ class StockMove(models.Model):
         return it_is
 
     def _create_delivery_notice_svl(self, forced_quantity=None):
-        move = self.with_context(standard=True, valued_type="delivery_notice")
-        return move._create_out_svl(forced_quantity)
+        moves = self.with_context(standard=True, valued_type="delivery_notice", l10n_skip_create_account_move=1)
+        svls = self.env["stock.valuation.layer"]
+        for move in moves:
+            created_svl =  move._create_out_svl(forced_quantity)
+            picking = self.picking_id
+            product = move.product_id 
+            accounts = product._get_product_accounts()
+            accounts2 = move._get_accounting_data_for_valuation()
+            value = abs(created_svl.value)
+            qty = abs(created_svl.quantity)
+            date = picking.l10n_ro_accounting_date if picking.l10n_ro_accounting_date else move.date
+            inv_to_create_acc = move.company_id.l10n_ro_property_invoice_to_create
+            if not inv_to_create_acc:
+                raise ValidationError(
+                    _(
+                        "Go to Settings/config/romania and set the property bill to receive to 418."
+                    )
+                )
+#O entitate livreaza produse finite doar pe baza de aviz de insotire a marfii. 
+#Ulterior se intocmeste factura. 
+#Valoarea facturii este de 300.000 lei plus TVA 19%. Costul de productie este de 85.000 lei.
+#Livrare produse finite:
+#418 = 701         300.000 lei
+#Descarcare de gestiune:
+#711 = 345            85.000 lei
+#Emiterea facturii:
+#4111 = %        357.000 lei
+#        418     300.000 lei
+#         4427      57.000 lei
+            created_account_move = self.env['account.move'].sudo().create(
+                {
+                    "date": date,
+                    "ref": f"Devlivery Notice for picking=({picking.name},{picking.id}), product={product.id,product.name}",
+                    "journal_id": accounts2[0],
+                    "line_ids": [
+                # move_lines with prices from notice
+                # notice delivery at sale price ( livrarea de produse)
+                        (
+                            0,
+                            0,
+                            {
+                                "partner_id":move.partner_id.id, 
+                                "account_id": inv_to_create_acc.id,  # 418
+                                "product_id": product.id,
+                                "name": "delivery_price "+product.name + f" ({move.price_unit}x{qty})",
+                                "quantity": qty,
+                                "debit": move.price_unit*qty,
+                                "credit": 0,
+                                "price_unit":move.price_unit,
+                            },
+                        ),
+                        (
+                            0,
+                            0,
+                            {
+                                "partner_id":move.partner_id.id,
+                                "account_id": accounts["income"].id,  # 7xx
+                                "product_id": product.id,
+                                "name": "delivery price " + product.name + f" ({move.price_unit}x{qty})",
+                                "quantity": qty,
+                                "debit": 0,
+                                "credit": move.price_unit*qty,
+                                "price_unit":move.price_unit,
+                            },
+                        ),
+
+ 
+                        # what was taken out of stock ( at existing values)
+                        # descarcarea de gestiune
+                        (
+                            0,
+                            0,
+                            {
+                                "partner_id":move.partner_id.id, 
+                                "account_id": accounts["income"].id,  # 7xx
+                                "product_id": product.id,
+                                "name": "cost price " + product.name + f" qty={qty}, value={value})",
+                                "quantity": qty,
+                                "debit": value,
+                                "credit": 0,
+                            },
+                        ),
+                        (
+                            0,
+                            0,
+                            {
+                                "partner_id":move.partner_id.id, 
+                                "account_id": accounts["stock_valuation"].id,  # 3xx
+                                "product_id": product.id,
+                                "name": "cost price " + product.name + f" qty={qty}, value={value})",
+                                "quantity": qty,
+                                "debit": 0,
+                                "credit": value,
+                            },
+                        ),
+                    ],
+                }
+            )
+            created_account_move.action_post()
+            created_svl.write({"l10n_ro_bill_accounting_date": date,
+                               "account_move_id":created_account_move})
+            svls |= created_svl
+        return svls
 
     def _is_delivery_notice_return(self):
         """Este retur livrare cu aviz"""
@@ -285,54 +386,13 @@ class StockMove(models.Model):
         move = self.with_context(standard=True, valued_type="delivery_notice_return")
         return move._create_in_svl(forced_quantity)
 
-    def _romanian_account_entry_move(self, qty, description, svl_id, cost):
-        res = super()._romanian_account_entry_move(qty, description, svl_id, cost)
-        svl = self.env["stock.valuation.layer"]
-        if self._is_delivery_notice():
-            # inregistrare valoare vanzare
-            sale_cost = self._l10n_ro_get_sale_amount()
-            move = self.with_context(valued_type="invoice_out_notice")
-
-            (
-                journal_id,
-                acc_src,
-                acc_dest,
-                acc_valuation,
-            ) = move._get_accounting_data_for_valuation()
-            move._create_account_move_line(
-                acc_valuation, acc_dest, journal_id, qty, description, svl, sale_cost
-            )
-
-        if self._is_delivery_notice_return():
-            # inregistrare valoare vanzare
-            sale_cost = -1 * self._l10n_ro_get_sale_amount()
-            move = self.with_context(valued_type="invoice_out_notice")
-
-            (
-                journal_id,
-                acc_src,
-                acc_dest,
-                acc_valuation,
-            ) = move._get_accounting_data_for_valuation()
-            move._create_account_move_line(
-                acc_dest, acc_valuation, journal_id, qty, description, svl_id, sale_cost
-            )
-        return res
-
-    def _l10n_ro_get_sale_amount(self):
-        valuation_amount = 0
-        sale_line = self.sale_line_id
-        if sale_line and salvalued_typee_line.product_uom_qty:
-            price_invoice = sale_line.price_subtotal / sale_line.product_uom_qty
-            price_invoice = sale_line.product_uom._compute_price(
-                price_invoice, self.product_uom
-            )
-            valuation_amount = price_invoice * abs(self.product_qty)
-            company = self.location_id.company_id or self.env.company
-            valuation_amount = sale_line.order_id.currency_id._convert(
-                valuation_amount, company.currency_id, company, self.date
-            )
-        return valuation_amount
+    def _account_entry_move(self, qty, description, svl_id, cost):
+        if self.picking_id.l10n_ro_notice and \
+            self.env['stock.valuation.layer'].browse(svl_id).l10n_ro_valued_type=="delivery_notice":
+            # we done the journal intry in same time as svl
+            return
+        else:
+            return super()._account_entry_move( qty, description, svl_id, cost)
 
     def _get_accounting_data_for_valuation(self):
         journal_id, acc_src, acc_dest, acc_valuation = super(

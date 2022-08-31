@@ -21,6 +21,7 @@ class StockPicking(models.Model):
         "With this field set, at reception you can set the value of received products."
         "At post will create a account_move with accounts 408/418.",
     )
+    #maybe also in l10n_ro_stock_account to know when is the innvoice/bill? 
     l10n_ro_accounting_date = fields.Datetime(
         "Accounting Date",
         copy=False,
