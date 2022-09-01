@@ -6,6 +6,7 @@
 
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
+from datetime import timedelta
 
 class StockPicking(models.Model):
     _inherit = "stock.picking"
@@ -36,8 +37,11 @@ class StockPicking(models.Model):
     l10n_ro_notice_bill_id = fields.Many2one("account.move", readonly=1, 
         help="This notice picking was billed in this bill")
     
-    @api.constrains("picking_type_id", "l10n_ro_notice")
+    @api.constrains("picking_type_id", "l10n_ro_notice", "l10n_ro_accounting_date")
     def _check_picking_type_code_notice(self):
         for rec in self:
             if rec.l10n_ro_notice and rec.picking_type_id.code not in ["incoming", "outgoing"]:
                 raise ValidationError(_(f'For picking=({rec.id},{rec.name}) you have l10n_ro_notice but picking_type_code={rec.picking_type_code} that is not in ["incoming", "outgoing"]'))
+            if rec.l10n_ro_accounting_date and rec.l10n_ro_accounting_date > fields.datetime.now() + timedelta(days=2):
+                raise ValidationError(_(f'For picking=({rec.id},{rec.name}) you can not set a l10n_ro_accounting_date in future!'))
+                

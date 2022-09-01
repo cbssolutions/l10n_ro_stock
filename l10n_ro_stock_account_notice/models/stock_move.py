@@ -5,7 +5,6 @@
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
 
 import logging
-
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 
@@ -23,7 +22,8 @@ class StockMove(models.Model):
     @api.onchange("product_id","product_uom_qty")
     def _onchange_product_id(self):
         "if delivery notice we are going to put the price for partner"
-        if self.is_l10n_ro_record and self.picking_id.l10n_ro_notice and self.product_id:
+        if self.is_l10n_ro_record and self.picking_id.l10n_ro_notice and self.product_id and not self.price_unit:
+            # if you set a price we are not changing it anymore
             # maybe in context with partner ..
             self.price_unit = self.product_id.with_company(self.company_id).lst_price
 
@@ -107,6 +107,7 @@ class StockMove(models.Model):
                     "date": date,
                     "ref": f"Reception Notice for picking=({picking.name},{picking.id}), product={product.id,product.name}",
                     "journal_id": accounts[0],
+                    "stock_move_id":move.id,
                     "line_ids": [
                         (
                             0,
@@ -118,6 +119,7 @@ class StockMove(models.Model):
                                 "quantity": qty,
                                 "debit": value,
                                 "credit": 0,
+                                "price_unit":value/qty if qty else 0,
                             },
                         ),
                         (
@@ -130,6 +132,7 @@ class StockMove(models.Model):
                                 "quantity": qty,
                                 "debit": 0,
                                 "credit": value,
+                                "price_unit":value/qty if qty else 0,
                             },
                         ),
                     ],
@@ -196,6 +199,7 @@ class StockMove(models.Model):
                     "date": move.date,
                     "ref": f"Return for notice_reception picking=({picking.name},{picking.id}), product={product.id,product.name}",
                     "journal_id": accoutns2[0],
+                    "stock_move_id":move.id,
                     "line_ids": [
                         (
                             0,
@@ -227,15 +231,12 @@ class StockMove(models.Model):
             created_account_move.action_post()
             created_svl.account_move_id = created_account_move.id
             svl += created_svl
-
-            
         return svl
 
     def _is_delivery(self):
         """Este livrare din stoc fara aviz"""
         if not self.is_l10n_ro_record:
             return super(StockMove, self)._is_delivery()
-
         return (
             super(StockMove, self)._is_delivery() and not self.picking_id.l10n_ro_notice
         )
@@ -265,7 +266,7 @@ class StockMove(models.Model):
         return it_is
 
     def _create_delivery_notice_svl(self, forced_quantity=None):
-        moves = self.with_context(standard=True, valued_type="delivery_notice", l10n_skip_create_account_move=1)
+        moves = self.with_context(standard=True, valued_type="delivery_notice")
         svls = self.env["stock.valuation.layer"]
         for move in moves:
             created_svl =  move._create_out_svl(forced_quantity)
@@ -297,8 +298,9 @@ class StockMove(models.Model):
             created_account_move = self.env['account.move'].sudo().create(
                 {
                     "date": date,
-                    "ref": f"Devlivery Notice for picking=({picking.name},{picking.id}), product={product.id,product.name}",
+                    "ref": f"Delivery Notice for picking=({picking.name},{picking.id}), product={product.id,product.name}",
                     "journal_id": accounts2[0],
+                    "stock_move_id":move.id,
                     "line_ids": [
                 # move_lines with prices from notice
                 # notice delivery at sale price ( livrarea de produse)
@@ -345,6 +347,7 @@ class StockMove(models.Model):
                                 "quantity": qty,
                                 "debit": value,
                                 "credit": 0,
+                                "price_unit":value/qty if qty else 0,
                             },
                         ),
                         (
@@ -358,6 +361,7 @@ class StockMove(models.Model):
                                 "quantity": qty,
                                 "debit": 0,
                                 "credit": value,
+                                "price_unit":value/qty if qty else 0,
                             },
                         ),
                     ],
@@ -373,7 +377,6 @@ class StockMove(models.Model):
         """Este retur livrare cu aviz"""
         if not self.is_l10n_ro_record:
             return False
-
         it_is = (
             self.company_id.l10n_ro_accounting
             and self.picking_id.l10n_ro_notice
@@ -383,13 +386,55 @@ class StockMove(models.Model):
         return it_is
 
     def _create_delivery_notice_return_svl(self, forced_quantity=None):
-        move = self.with_context(standard=True, valued_type="delivery_notice_return")
-        return move._create_in_svl(forced_quantity)
+        moves = self.with_context(standard=True, valued_type="delivery_notice_return")
+        svls = self.env["stock.valuation.layer"]
+        for move in moves:
+            created_svl =  move._create_in_svl(forced_quantity)
+            picking = self.picking_id
+            product = move.product_id 
+            qty = abs(created_svl.quantity)
+            date = picking.l10n_ro_accounting_date if picking.l10n_ro_accounting_date else move.date
+            # the accounting move must be inverse of the original one with this qty
+            origin_returned_move_id = move.origin_returned_move_id
+            origin_account_id = origin_returned_move_id.account_move_ids
+            # we can find origin_account_id in svl ( to work before of this version but are not ok, so it does not mater)
+            if len(origin_account_id)!=1:
+                raise ValidationError(
+                    _(
+                        f"For stock_move={move}, with origin_returned_move_id={origin_returned_move_id}"
+                        f" the origin_account_id={origin_account_id} and because it's len is not 1"
+                        f" we can not create reverse accounting entries"
+                    )
+                )
+            account_move_dict= {
+                    "date": date,
+                    "ref": f"Return for {origin_account_id.id},{origin_account_id.name}. Return of Delivery Notice for picking=({picking.name},{picking.id}), product={product.id,product.name}",
+                    "journal_id": origin_account_id.journal_id.id,
+                    "stock_move_id":move.id,
+                    "line_ids":[]}
+            for line in origin_account_id.line_ids:
+                multiplier = qty/line.quantity if line.quantity else 0
+                account_move_dict["line_ids"].append([0,0,{
+                    "partner_id": line.partner_id.id,
+                    "account_id": line.account_id.id, 
+                    "product_id": line.product_id.id,
+                    "name": "Return of: " + line.name,
+                    "quantity": qty,
+                    "debit": line.debit * multiplier,
+                    "credit": line.credit * multiplier,
+                    "price_unit":line.price_unit * multiplier,
+                    }])
+            created_account_move = self.env['account.move'].sudo().create(account_move_dict)
+            created_account_move.post()
+            created_svl.write({"l10n_ro_bill_accounting_date": date,
+                               "account_move_id":created_account_move})
+            svls |= created_svl
+        return svls
 
     def _account_entry_move(self, qty, description, svl_id, cost):
         if self.picking_id.l10n_ro_notice and \
-            self.env['stock.valuation.layer'].browse(svl_id).l10n_ro_valued_type=="delivery_notice":
-            # we done the journal intry in same time as svl
+            self.env['stock.valuation.layer'].browse(svl_id).l10n_ro_valued_type in ["delivery_notice", "delivery_notice_return"]:
+            # we done the journal entry in same time as svl
             return
         else:
             return super()._account_entry_move( qty, description, svl_id, cost)
