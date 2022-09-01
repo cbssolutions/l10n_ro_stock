@@ -35,7 +35,7 @@ class AccountMoveLine(models.Model):
                     )
                 return acc_bill_to_recieve
             if self.move_id.move_type in [ 'out_invoice', 'out_refund'] \
-                and self.move_id.l10n_ro_invoice_for_pickings_ids.move_ids.filtered(lambda r: r.product_id == self.product_id):  
+                and self.move_id.l10n_ro_invoice_for_pickings_ids.move_lines.filtered(lambda r: r.product_id == self.product_id):  
                 # product in notice_pickings
                 acc_invoice_to_create = self.company_id.l10n_ro_property_invoice_to_create
                 if not acc_invoice_to_create:
