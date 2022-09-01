@@ -311,6 +311,7 @@ class StockMove(models.Model):
                                 "partner_id":move.partner_id.id, 
                                 "account_id": inv_to_create_acc.id,  # 418
                                 "product_id": product.id,
+                                # do not change the name because is used when making the invoice
                                 "name": "delivery_price "+product.name + f" ({move.price_unit}x{qty})",
                                 "quantity": qty,
                                 "debit": move.price_unit*qty,
@@ -325,7 +326,7 @@ class StockMove(models.Model):
                                 "partner_id":move.partner_id.id,
                                 "account_id": accounts["income"].id,  # 7xx
                                 "product_id": product.id,
-                                "name": "delivery price " + product.name + f" ({move.price_unit}x{qty})",
+                                "name": "delivery_price " + product.name + f" ({move.price_unit}x{qty})",
                                 "quantity": qty,
                                 "debit": 0,
                                 "credit": move.price_unit*qty,

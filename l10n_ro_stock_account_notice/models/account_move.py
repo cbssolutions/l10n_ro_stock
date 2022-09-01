@@ -61,6 +61,10 @@ class AccountMove(models.Model):
         # we are adding lines to corect the notice pickings
         for rec in self:
             pickings = rec.l10n_ro_bill_for_pickings_ids
+            is_bill_not_invoice = True
+            if rec.l10n_ro_invoice_for_pickings_ids:
+                pickings = rec.l10n_ro_invoice_for_pickings_ids
+                is_bill_not_invoice = False
             if pickings:
                 # bills for notice reception pickings
                 lines = rec.invoice_line_ids
@@ -70,55 +74,72 @@ class AccountMove(models.Model):
                 for svl in svls:
                     product_qty_value_svls[svl.product_id]['qty'] += svl.quantity
                     if svl.l10n_ro_modified_value:
-                        # case when notice svl was modified
+                        # case when notice svl was modified ( from draft than posted again, only for bill)
                         value = svl.l10n_ro_modified_value
                     else:
                         value = svl.value
-                    product_qty_value_svls[svl.product_id]['value'] += value
                     if svl.account_move_id.state != "posted":
-                        raise ValidationError(_(f"For Bill=({rec.id,rec.name}), with l10n_ro_bill_for_pickings_ids={rec.l10n_ro_bill_for_pickings_ids} for product=({svl.product_id.id, svl.product_id.name}) "
+                        raise ValidationError(_(f"For Bill/Invoice=({rec.id,rec.name}), with pickings={pickings} for product=({svl.product_id.id, svl.product_id.name}) "
                                                 f"for svl={svl} you have account_move={svl.account_move_id} that is not posted"))
-                    else:
-                        credit_account = svl.account_move_id.line_ids.filtered(lambda r: r.product_id == svl.product_id and r.credit != 0)[0].account_id
-                        if product_qty_value_svls[svl.product_id]['account_id'] and \
-                            product_qty_value_svls[svl.product_id]['account_id'] != credit_account:
-                            raise ValidationError(_(f"For Bill=({rec.id,rec.name}), with l10n_ro_bill_for_pickings_ids={rec.l10n_ro_bill_for_pickings_ids} for product=({svl.product_id.id, svl.product_id.name}) "
-                                                    f"for svl={svl} you have account={credit_account} that is diffrent than in another svl form pickings"))
-                        else:    
-                            product_qty_value_svls[svl.product_id]['account_id'] = credit_account
+                    
+                    # trebuie sa iau debit la invoice
+                    if is_bill_not_invoice: #credit account
+                        account = svl.account_move_id.line_ids.filtered(lambda r: r.product_id == svl.product_id and r.credit != 0)[0].account_id
+                    else: # debit account
+                        svl_account_move_line = svl.account_move_id.line_ids
+                        delivery_price_line = svl_account_move_line.filtered(lambda r: r.product_id == svl.product_id and r.debit != 0 and r.name[:8]=='delivery')[0]
+                        account = delivery_price_line[0].account_id
+                        value = delivery_price_line[0].debit
+                        
+                    product_qty_value_svls[svl.product_id]['value'] += value
+                    if product_qty_value_svls[svl.product_id]['account_id'] and \
+                        product_qty_value_svls[svl.product_id]['account_id'] != credit_account:
+                        raise ValidationError(_(f"For Bill/Invoice=({rec.id,rec.name}), with pickings={pickings} for product=({svl.product_id.id, svl.product_id.name}) "
+                                                f"for svl={svl} you have account={account} that is diffrent than in another svl form pickings"))
+                    product_qty_value_svls[svl.product_id]['account_id'] = account
+                    
                 for product, qty_value in  product_qty_value_svls.items():
                     product_line = lines.filtered(lambda r: r.product_id == product)
                     if len(product_line) != 1:
-                        raise ValidationError(_(f"For Bill=({rec.id,rec.name}), with l10n_ro_bill_for_pickings_ids={rec.l10n_ro_bill_for_pickings_ids} for product=({product.id, product.name}) you do not have one invoice line product_line={product_line}."))
+                        raise ValidationError(_(f"For Bill/Invoice=({rec.id,rec.name}), with pickings={pickings} for product=({product.id, product.name}) you do not have one invoice line product_line={product_line}."))
+                    balance = product_line.balance
+                    invoice_notice_diff = balance - qty_value["value"]
+                    if not is_bill_not_invoice:
+                        qty_value["qty"] *= -1
+                        invoice_notice_diff =  qty_value["value"] + balance # balance is negative
                     if qty_value['qty'] != product_line.quantity:
-                        raise ValidationError(_(f"For Bill=({rec.id,rec.name}), with l10n_ro_bill_for_pickings_ids={rec.l10n_ro_bill_for_pickings_ids} for product=({product.id, product.name}) you have invoice line qty={product_line.quantity} that is different than pickings_qty={qty_value['qty']}"))
+                        raise ValidationError(_(f"For Bill/Invoice=({rec.id,rec.name}), with pickings={pickings}for product=({product.id, product.name}) you have invoice line qty={product_line.quantity} that is different than pickings_qty={qty_value['qty']}"))
                     if qty_value["account_id"] != product_line.account_id:
-                        raise ValidationError(_(f"For Bill=({rec.id,rec.name}), with l10n_ro_bill_for_pickings_ids={rec.l10n_ro_bill_for_pickings_ids} for product=({product.id, product.name}) you have account in invoice line {product_line.account_id} that is different than account move for svl={qty_value['account_id']}"))
-                    invoice_notice_diff = product_line.balance - qty_value["value"]
+                        raise ValidationError(_(f"For Bill/invoice=({rec.id,rec.name}), with pickings={pickings} for product=({product.id, product.name}) you have account in invoice line {product_line.account_id} that is different than account move for svl={qty_value['account_id']}"))
                     if not invoice_notice_diff:
                         continue
                     if rec.currency_id != rec.company_id.currency_id:
                         # 665 "Cheltuieli cu diferentele de curs valutar"
                         # 765 "Venituri din diferente de curs valutar"
-                        negative_dif_acc = rec.company_id.l10n_ro_property_revenues_from_exchange_rate
-                        positive_dif_acc = rec.company_id.l10n_ro_property_expensed_from_exchange_rate
+                        if is_bill_not_invoice:
+                            negative_dif_acc = rec.company_id.l10n_ro_property_notice_bill_positive
+                            positive_dif_acc = rec.company_id.l10n_ro_property_notice_bill_negative
+                        else:
+                            positive_dif_acc = rec.company_id.l10n_ro_property_revenues_from_exchange_rate
+                            negative_dif_acc = rec.company_id.l10n_ro_property_expensed_from_exchange_rate
                     else:
                         # 609 = “Reduceri comerciale primite“
                         # 348 “Diferente de pret la produse”  
-                        # l10n_ro_property_notice_invoice_positive = fields.Many2one(
-                        # l10n_ro_property_notice_invoice_negative = fields.Many2one(
-                        negative_dif_acc = rec.company_id.l10n_ro_property_notice_bill_positive
-                        positive_dif_acc = rec.company_id.l10n_ro_property_notice_bill_negative
+                        if is_bill_not_invoice:
+                            negative_dif_acc = rec.company_id.l10n_ro_property_notice_bill_positive
+                            positive_dif_acc = rec.company_id.l10n_ro_property_notice_bill_negative
+                        else:
+                            positive_dif_acc = rec.company_id.l10n_ro_property_notice_invoice_positive
+                            negative_dif_acc = rec.company_id.l10n_ro_property_notice_invoice_negative
                     account = positive_dif_acc if invoice_notice_diff >0 else negative_dif_acc
                     if not account:
                         raise ValidationError(_(f"For Bill=({rec.id,rec.name}), with "
-                            f"l10n_ro_bill_for_pickings_ids={rec.l10n_ro_bill_for_pickings_ids}"
+                            f"pickings={pickings}"
                             f" for product=({product.id, product.name}) you have invoice"
                             f"_value-notice_value={invoice_notice_diff}. "
                             "You not not have set the difference account. "
                             "Go to Settings/General Settings"
                             "/Romanaia & set the account."))
-                    # this is doing another acount_move. why the hell?
                     rec.write({"line_ids":[(0,0,{
                         'name': f"Difference product={product.id,product.name} invoice-notice={invoice_notice_diff}",
                         'debit':invoice_notice_diff if invoice_notice_diff > 0 else 0,
@@ -137,9 +158,6 @@ class AccountMove(models.Model):
                         "exclude_from_invoice_tab":True,
                         })]})
                     
-            if rec.l10n_ro_invoice_for_pickings_ids:
-                pass
-                #valuated_products = rec.invoice_line_ids.product_ids.filtered(lambda r:)
         res = super().action_post()
         return res
              
