@@ -82,7 +82,6 @@ class AccountMove(models.Model):
                         raise ValidationError(_(f"For Bill/Invoice=({rec.id,rec.name}), with pickings={pickings} for product=({svl.product_id.id, svl.product_id.name}) "
                                                 f"for svl={svl} you have account_move={svl.account_move_id} that is not posted"))
                     
-                    # trebuie sa iau debit la invoice
                     if is_bill_not_invoice: #credit account
                         account = svl.account_move_id.line_ids.filtered(lambda r: r.product_id == svl.product_id and r.credit != 0)[0].account_id
                     else: # debit account

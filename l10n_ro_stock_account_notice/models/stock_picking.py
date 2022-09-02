@@ -20,7 +20,8 @@ class StockPicking(models.Model):
         default=False,
         help="With this field the reception/delivery is set as a notice. "
         "With this field set, at reception you can set the value of received products."
-        "At post will create a account_move with accounts 408/418.",
+        "At post will create a account_move with accounts 408/418."
+        "In Romanian language notice = este marfa trimisa/receptionata cu aviz (factura e ulterioara)",
     )
     #maybe also in l10n_ro_stock_account to know when is the innvoice/bill? 
     l10n_ro_accounting_date = fields.Datetime(

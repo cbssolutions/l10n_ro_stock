@@ -1,4 +1,5 @@
 The module is for reception/devlivery of products without invoice.
+(modul folositor daca vindeti sau cumparati cu aviz si facturati/sunteti facturat mai tarziu)
 In picking fields 
         - l10n_ro_notice menas that is stock that does not have invoice and will be done later.
         - l10n_ro_accounting_date if notice  the date of created svl and account_moves.
