@@ -92,7 +92,7 @@ class AccountMove(models.Model):
                         
                     product_qty_value_svls[svl.product_id]['value'] += value
                     if product_qty_value_svls[svl.product_id]['account_id'] and \
-                        product_qty_value_svls[svl.product_id]['account_id'] != credit_account:
+                        product_qty_value_svls[svl.product_id]['account_id'] != account:
                         raise ValidationError(_(f"For Bill/Invoice=({rec.id,rec.name}), with pickings={pickings} for product=({svl.product_id.id, svl.product_id.name}) "
                                                 f"for svl={svl} you have account={account} that is diffrent than in another svl form pickings"))
                     product_qty_value_svls[svl.product_id]['account_id'] = account
