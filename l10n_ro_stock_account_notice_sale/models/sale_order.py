@@ -1,8 +1,8 @@
 # Copyright (C) 2022 cbssolutions.ro
 from odoo import models
 
-class PurchaseOrder(models.Model):
-    _inherit = "purchase.order"
+class SaleOrder(models.Model):
+    _inherit = "sale.order"
 
     def _prepare_invoice(self):
         # from invoiced products we are getting coresponding the notice picking
