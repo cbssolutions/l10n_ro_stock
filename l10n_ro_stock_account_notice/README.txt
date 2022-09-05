@@ -6,7 +6,7 @@ In picking fields
 
 At reception or delivery we have also a price_unit per product.
 This price_unit will create svl and accounting Journal Entries ( for each product)
-Created journal entries will have the account 408/418 invoices to make/recive
+Created journal entries will have the account 408/418 invoices to make/receive
 
 ! Ff you done a mistake at a notice reception ( price, date), you can modify the generated account_moves form svl per picking
 ! you are doing this by setting to draft and post it again
@@ -14,13 +14,14 @@ Created journal entries will have the account 408/418 invoices to make/recive
 
 At the receiving of a bill or creating a invoice you can set the notice pickings; 
 if this is the case you'll have acocunt_mvoe_lines with account 408/418 and if a price 
-difference will create another line with price idfference
+difference will create another line with price difference
 
-In case (not probable) of reciving a invoice that have part of a notice (aviz), do not use the notice_pickings_ids field and modify the account_move_lines in bill.
+In case (not probable) of reciving a invoice that have partialy of a notice (aviz), do not use the notice_pickings_ids field and modify the account_move_lines in bill.
 
+At invoice for picking we are going to compare the qty and price. It will raise error if qty diffrence, and will create diffrence line ( if is in another currency will be loss/gain, if not will be discount/diffrence)
 
  
- Pretul de achizitie ce este mentionat pe NIR (nota intrare si receptie marfa)este cel de la data primirii bunurilor, respectiv cel de 250 lei / buc. In privinta facturii finale, dupa cum mentionati, aceasta cuprinde un discount (de 10 lei / buc) acordat pe insasi factura de livrare (240 lei in loc de 250 lei). Pretul de vanzare catre client este, probabil, cel putin egal cu cel de achizitie initial, de 250 lei, urmand ca societatea sa castige din discountul primit pe factura finala de la furnizor.
+Pretul de achizitie ce este mentionat pe NIR (nota intrare si receptie marfa)este cel de la data primirii bunurilor, respectiv cel de 250 lei / buc. In privinta facturii finale, dupa cum mentionati, aceasta cuprinde un discount (de 10 lei / buc) acordat pe insasi factura de livrare (240 lei in loc de 250 lei). Pretul de vanzare catre client este, probabil, cel putin egal cu cel de achizitie initial, de 250 lei, urmand ca societatea sa castige din discountul primit pe factura finala de la furnizor.
  
 Monografia contabila este urmatoarea:
 1) primirea, receptia si inregistrarea bunurilor in gestiune si in contabilitate pe baza deliverz-note-ului si a NIR-ului intocmit de societate:

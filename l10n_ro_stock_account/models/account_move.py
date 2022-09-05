@@ -73,7 +73,7 @@ class AccountMove(models.Model):
     def action_post(self):
         # for a invoice that is made from a reception picking -has l10n_ro_bill_for_picking
         # we have the qty in reception and price in invoice (qty must be from picking)
-        # in svl from picking we are going toset invoice date to curent svl, and create a value
+        # in svl from picking we are going to set invoice date to curent svl, and create a value
         precision = self.env["decimal.precision"].precision_get(
             "Product Unit of Measure"
         )
@@ -168,7 +168,7 @@ class AccountMoveLine(models.Model):
 
     def _get_computed_account(self):
         res = super(AccountMoveLine, self)._get_computed_account()
-        # Take accounts from stock location in case the category allow changinc
+        # Take accounts from stock location in case the category allow changing
         # accounts and the picking is not notice
         if (
             self.product_id.categ_id.l10n_ro_stock_account_change

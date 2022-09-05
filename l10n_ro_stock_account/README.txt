@@ -12,7 +12,7 @@ For consumable products we are not going to make stock_valuation_entries at move
     and vhen we use/sell them we just make income, 
 
 
-In Romania, the products get into stock with supplier invoice/bill ( and svl is created based on the values from bill).
+In Romania, the products get into stock with supplier invoice/bill ( and svl is getting he value form from bill).
 Another case is when the products are geting into stock with a value (picking type notice) and after a time is coming the bill - is covered in l10n_ro_stock_notice module
 
 At a validatin of reception that does not have l10n_ro_is_notice will create a svl recived qty and value of 0.
@@ -25,8 +25,6 @@ If a invoice has l10n_ro_bill_for_picking at validation is going to:
   - if no qty exist in stock - instead on incresing the 3xx account will create a consume account line
   
 
-
-
 On companies that have partner_id.country= romania is setting 
 "l10n_ro_accounting": True,
 "anglo_saxon_accounting": True,        # the check is anglo_saxon_accounting, but romanian accounting is a mix     
@@ -38,45 +36,15 @@ l10n_ro_property_account_expense_location_id
 l10n_ro_property_stock_valuation_account_id
  and if set will overwrite the accounts set on product if it has l10n_ro_stock_account_change
  
- Contraint on product to have stock_input = stock_output = stock_val
+Contraint on product to have stock_input = stock_output = stock_val
  
     
-In stock_valuation_layer we are adding
-    l10n_ro_valued_type   # just a name we can live also without
-    l10n_ro_bill_accounting_date  This is the date from billing accounting date. The bill that generate this svl
-
-in stock_move_line
-    mthod _create_correction_svl    
-    
-in stock_move
-
-
 !!!!!!!!!!!! if something is wrong in svl, go in inventory/reporting/inventory valuation, search for the product
 and in grouped product you have a + is going to open action_revaluation that is letting you add a line for that product
 that will change the remaining_value at svl with remaining_qty ( and creates also a accouting entry)
 You can create a reverse entry for accounting entry (account_move) and you will create a difference between 3xx account and the value of stock (svl).
-In general, the account_move that do not have a valuation are creating diffence between 3xx and svl
+The account_move that do not have a valuation are creating diffence between 3xx and svl
 
-
-TEST CASE:
-A. RECEPTION: (cost price 9.1  9.2 9.3 9.4)
-
-A1. picking:    p91  x 10units   & p92  X 20units& p93 x 30 units   p94 cosumable      date today
-svl for p91, p92, p93 with received qty and value of 0
-
-till the inovie  p91 remaining qty 0, p92 remaing qty 4, p 93 remaing qty 30
-what we deliver from this reception is going to get out with a value of 0 ( because we did not record the invoice in odoo, and does not know any cost)
-
-A2. invoice: it must have the picking as l10n_ro_bill_for_picking   ( is the field that is telling odoo for what picking is this inovice.)
-is going to verify picking vs invoice lines and qty to be the same, if not will raise error
-
-invoice     p91   10lei    p92  12lei   p93  13 p94 14  accounting_date yesterday
-accounting lines   6xx  debit 100lei ( p91)     3xx debit 240 (p92)    3xx debit 390 (p92)  6xx debit 420
-new svl (with account_move_id the invoice) for p92 with stock_valuation_layer_id (linked to reception svl) will recive a qty 0 with value of 240 => unit_value =240/4 = 60
-new svl for p93 with qty=0 and value of 390 => now p93 from stock have a unit value of 13
-
-A3. we deliver 2 x p92  and 10 x p93  
-=> svl with -qty and price with accounting_entries that are p92: debit 3xx 120  p93: debit 3xx  130
 
 B. Setting to draft of a account_move (invoice or accounting entry) that has svl:
 B1 if remaining_qty
@@ -95,7 +63,6 @@ C1a. if they set to draft the reception invoice is going to modify the value of 
 C1b. if they are going to create a inverse invoice, this one must decrese the value of remaining svl 
 
 D. Scrap of a reception  = minus inventory  is creating a svl (with qty and what price is finding in stock) and account_move with value
-
 
 
 E. Delivery

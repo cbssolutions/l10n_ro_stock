@@ -31,7 +31,6 @@ class StockLocation(models.Model):
 
     # se va folosi   pentru a evalua diferit un produs care se
     # gaseste in aceasta locatie
-
     l10n_ro_property_stock_valuation_account_id = fields.Many2one(
         "account.account",
         string="Stock Valuation Account",

@@ -16,6 +16,7 @@ class StockValuationLayer(models.Model):
     # fields to work the set to draft and post again to change the values/ date
     l10n_ro_draft_svl_id = fields.Many2one("stock.valuation.layer",  help="was created from a setting to draft. is the reverse of this svl")
     l10n_ro_draft_svl_ids = fields.One2many("stock.valuation.layer","l10n_ro_draft_svl_id", help="it's value was nulled (at setting to draft the account_move) by this entry")
+    # just for valued reports per location
     l10n_ro_location_dest_id = fields.Many2one("stock.location",
                                             store=1,
                                             related="stock_move_id.location_dest_id",

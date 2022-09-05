@@ -12,13 +12,11 @@ _logger = logging.getLogger(__name__)
 
 
 class AccountMove(models.Model):
-    # try to keep the stock value account 3xx at same value as stock_valuation
-    # at setting to draft account_moves (invoices and not) that have valuation on them
-    # can be the case of reception or + inventory
-    # and than at posting
+    #  keep the stock value account 3xx at same value as stock_valuation
+    # at setting to draft/reposted account_moves (invoices and not) that have valuation on them
+    # can be the case of reception, inventory  ..
 
     _inherit = "account.move"
-
 
         
     def action_post(self):
@@ -82,7 +80,7 @@ class AccountMove(models.Model):
                         )
                     )
                 if svl.quantity != line_qty:
-                    # can be also without this, but for modificatin is should not get here
+                    # can be also without this, and is should not get here
                     raise UserError(
                         _(
                             text_error
@@ -326,6 +324,5 @@ class AccountMove(models.Model):
                     
                     svl_to_modify.write({"remaining_value":svl_to_modify.remaining_value - value,
                                          "unit_cost":(svl_to_modify.remaining_value - value)/svl_to_modify.remaining_qty if svl_to_modify.remaining_qty else 0} )
-        
         
         return super().button_draft()
