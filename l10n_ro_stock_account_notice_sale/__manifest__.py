@@ -16,8 +16,7 @@
         "l10n_ro_stock_account_notice",
     ],
     "license": "AGPL-3",
-    "data": [
-    ],
+    "data": [],
     "installable": True,
     "auto_install": True,
     "maintainers": ["dev@cbssolutions.ro"],

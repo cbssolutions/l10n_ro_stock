@@ -15,6 +15,6 @@
         "views/account_move_views.xml",
     ],
     "installable": True,
-    "auto_install": False, # not all companies are using notce (cumpara pe aviz)
+    "auto_install": False,  # not all companies are using notce (cumpara pe aviz)
     "maintainers": ["dev@cbssolutions.ro", "feketemihai", "dhongu"],
 }

@@ -11,7 +11,7 @@
     "website": "https://github.com/OCA/l10n-romania",
     "depends": [
         "stock_account",
-       #  "purchase_stock", # works also with them but also without
+        #  "purchase_stock", # works also with them but also without
         "l10n_ro_stock",
     ],
     "license": "AGPL-3",
@@ -21,7 +21,7 @@
         "views/stock_location_view.xml",
         "views/stock_picking_view.xml",
         "views/stock_valuation_layer_views.xml",
-#        "wizard/stock_picking_return_views.xml",  not necessary anymore
+        #        "wizard/stock_picking_return_views.xml",  not necessary anymore
         "views/account_move_views.xml",
     ],
     "installable": True,

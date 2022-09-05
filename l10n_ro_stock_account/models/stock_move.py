@@ -79,12 +79,13 @@ class StockMove(models.Model):
                     "company_id": move.company_id.id,
                     "value": 0,
                     "remaining_value": 0,
-                    "l10n_ro_bill_accounting_date": False, # will be put at invoice
+                    "l10n_ro_bill_accounting_date": False,  # will be put at invoice
                     "quantity": move.quantity_done,
                     "remaining_qty": move.quantity_done,
                     "unit_cost": 0,
                     "l10n_ro_valued_type": "reception",
-                })
+                }
+            )
         return self.env["stock.valuation.layer"].create(svl_vals_list)
 
     def _is_reception_return(self):
@@ -112,42 +113,61 @@ class StockMove(models.Model):
                     .stock_valuation_layer_ids.filtered(lambda sv: sv.remaining_qty > 0)
                     .ids
                 )
-                svl =  move._create_out_svl(forced_quantity)
+                svl = move._create_out_svl(forced_quantity)
                 if not svl:
                     continue
 
-                journal_id, acc_src, acc_dest, acc_valuation = move._get_accounting_data_for_valuation()
+                (
+                    journal_id,
+                    acc_src,
+                    acc_dest,
+                    acc_valuation,
+                ) = move._get_accounting_data_for_valuation()
 
-                
                 picking = move.picking_id
                 product = move.product_id
                 accounts = product._get_product_accounts()
                 # we need to create the reception_return account_entries with the value from svl
                 # if not we will have diffrence in 3xx acount
-                created_account_move = self.sudo().env['account.move'].create({
-                    "move_type": "entry",
-                    "date":move.date,
-                    "journal_id":journal_id,
-                    "company_id":move.company_id.id,
-                    "ref": f"reception_return_picking={picking.name}",
-                    "line_ids":[(0,0,{
-                        "product_id": product.id,
-                        "debit":abs(svl.value),
-                        "credit":0,
-                        "quantity":move.quantity_done,
-                        "account_id":accounts["expense"].id,
-                        "name":f"reception_return_picking product={product.name}, qty={move.quantity_done}, unit_price={svl.unit_cost}"
-                        }),
-                                (0,0,{
-                        "product_id": product.id,
-                        "debit":0,
-                        "credit":abs(svl.value),
-                        "quantity":move.quantity_done,
-                        "account_id":acc_dest,
-                        "name":f"reception_return_picking product={product.name}, qty={move.quantity_done}, unit_price={svl.unit_cost}"
-                                    })],
-                    
-                })
+                created_account_move = (
+                    self.sudo()
+                    .env["account.move"]
+                    .create(
+                        {
+                            "move_type": "entry",
+                            "date": move.date,
+                            "journal_id": journal_id,
+                            "company_id": move.company_id.id,
+                            "ref": f"reception_return_picking={picking.name}",
+                            "line_ids": [
+                                (
+                                    0,
+                                    0,
+                                    {
+                                        "product_id": product.id,
+                                        "debit": abs(svl.value),
+                                        "credit": 0,
+                                        "quantity": move.quantity_done,
+                                        "account_id": accounts["expense"].id,
+                                        "name": f"reception_return_picking product={product.name}, qty={move.quantity_done}, unit_price={svl.unit_cost}",
+                                    },
+                                ),
+                                (
+                                    0,
+                                    0,
+                                    {
+                                        "product_id": product.id,
+                                        "debit": 0,
+                                        "credit": abs(svl.value),
+                                        "quantity": move.quantity_done,
+                                        "account_id": acc_dest,
+                                        "name": f"reception_return_picking product={product.name}, qty={move.quantity_done}, unit_price={svl.unit_cost}",
+                                    },
+                                ),
+                            ],
+                        }
+                    )
+                )
                 created_account_move.action_post()
                 svl.account_move_id = created_account_move
             created_svl += svl

@@ -19,7 +19,6 @@ class AccountMove(models.Model):
 
     _inherit = "account.move"
 
-        
     def action_post(self):
         # post again of account_moves with svl ( before were set to draft)
         # the bills that have l10n_ro_bill_for_picking are not taken into consideration
@@ -30,7 +29,9 @@ class AccountMove(models.Model):
         )
 
         for move in self.filtered(
-            lambda r: r.is_l10n_ro_record and r.stock_valuation_layer_ids and not r.l10n_ro_bill_for_picking
+            lambda r: r.is_l10n_ro_record
+            and r.stock_valuation_layer_ids
+            and not r.l10n_ro_bill_for_picking
         ):
 
             for svl in move.stock_valuation_layer_ids.filtered(lambda r: r.quantity):
@@ -55,17 +56,18 @@ class AccountMove(models.Model):
                 )
                 accounts = svl.product_id._get_product_accounts()
                 move_line = move.line_ids.filtered(
-                    lambda r: r.product_id == svl.product_id and r.account_id == accounts["stock_valuation"]
+                    lambda r: r.product_id == svl.product_id
+                    and r.account_id == accounts["stock_valuation"]
                 )
                 if len(move_line) != 1:
-                     raise UserError(
+                    raise UserError(
                         _(
                             text_error
                             + f" something is wrong. We should have one line with stock_account for this svl  "
                             f"svl={svl} move_line={move_line}"
                         )
                     )
-                   
+
                 line_qty = (
                     move_line.quantity
                 )  # HERE I THINK I MUST CONVERT THE POSIBLE QTY IN PRODUCT QTY
@@ -90,13 +92,13 @@ class AccountMove(models.Model):
                         )
                     )
                 balance = move_line.balance
-                # we create a svl with new posted valuation 
-                #( at draft the initial value is substrcted like it was never put)
+                # we create a svl with new posted valuation
+                # ( at draft the initial value is substrcted like it was never put)
                 created_svl = svl.sudo().create(
                     {
                         "description": "RePosted " + svl.description,
-                        "product_id":svl.product_id.id,
-                        "account_move_id":move.id,
+                        "product_id": svl.product_id.id,
+                        "account_move_id": move.id,
                         "quantity": 0,
                         "remaining_value": 0,
                         "value": balance,
@@ -104,15 +106,18 @@ class AccountMove(models.Model):
                         "company_id": svl.company_id.id,
                         "stock_valuation_layer_id": svl.id,
                         "l10n_ro_bill_accounting_date": move.date,
-
                     }
                 )
-                svl.write({"remaining_value": svl.remaining_value + balance,
-                           "l10n_ro_bill_accounting_date": move.date,
-                           "unit_cost": (svl.remaining_value + balance)/svl.remaining_qty,
-                           "l10n_ro_modified_value":balance, # used in l10n_ro_stock_picing
-                           })
-                
+                svl.write(
+                    {
+                        "remaining_value": svl.remaining_value + balance,
+                        "l10n_ro_bill_accounting_date": move.date,
+                        "unit_cost": (svl.remaining_value + balance)
+                        / svl.remaining_qty,
+                        "l10n_ro_modified_value": balance,  # used in l10n_ro_stock_picing
+                    }
+                )
+
             # for stock landed cost reposting the account_move
             if hasattr(move, "landed_costs_ids"):
                 for line in move.line_ids:
@@ -120,23 +125,35 @@ class AccountMove(models.Model):
                     accounts = product._get_product_accounts()
                     if line.account_id != accounts["stock_valuation"]:
                         continue
-                    draft_svl=move.stock_valuation_layer_ids.filtered(lambda r: r.l10n_ro_draft_svl_id)
+                    draft_svl = move.stock_valuation_layer_ids.filtered(
+                        lambda r: r.l10n_ro_draft_svl_id
+                    )
                     if not draft_svl:
-                        continue # is first posting
-                    before_created_svl = draft_svl.filtered(lambda r: r.product_id == product)[0]
+                        continue  # is first posting
+                    before_created_svl = draft_svl.filtered(
+                        lambda r: r.product_id == product
+                    )[0]
                     text_error = (
                         f"For Landed Cost AccountMove:({move.id}, {move.ref}) at "
                         f"product=({product.id}, {product.name}) "
                         f"balance={line.balance}"
                     )
                     if not before_created_svl:
-                        raise UserError(_(text_error +
-                            ", you do not have before created svl that was set to draft (has l10n_ro_draft_svl_id) "
-                                          ))
+                        raise UserError(
+                            _(
+                                text_error
+                                + ", you do not have before created svl that was set to draft (has l10n_ro_draft_svl_id) "
+                            )
+                        )
                     svl_to_modify = before_created_svl.stock_valuation_layer_id
                     if not svl_to_modify:
-                        raise UserError(_(text_error+ f"before_created_svl={before_created_svl.id}{before_created_svl.desciption}"
-                                          " does not have stock_valuation_layer_id"))
+                        raise UserError(
+                            _(
+                                text_error
+                                + f"before_created_svl={before_created_svl.id}{before_created_svl.desciption}"
+                                " does not have stock_valuation_layer_id"
+                            )
+                        )
                     if not svl_to_modify.remaining_qty:
                         raise UserError(
                             _(
@@ -150,15 +167,20 @@ class AccountMove(models.Model):
                         )
                     slc = before_created_svl.stock_landed_cost_id
                     if slc.state == "draft":
-                        raise UserError(_(text_error+ f"before_created_svl={before_created_svl.id}{before_created_svl.description}"
-                                          f" has stock_landed_cost=({slc.id}, {slc.name}) that is in draft state. Make the operation from landed cost (or create another one)!"))
-                        
+                        raise UserError(
+                            _(
+                                text_error
+                                + f"before_created_svl={before_created_svl.id}{before_created_svl.description}"
+                                f" has stock_landed_cost=({slc.id}, {slc.name}) that is in draft state. Make the operation from landed cost (or create another one)!"
+                            )
+                        )
+
                     balance = line.balance
                     created_svl = before_created_svl.sudo().create(
                         {
                             "description": "RePosted " + before_created_svl.description,
-                            "product_id":product.id,
-                            "account_move_id":move.id,
+                            "product_id": product.id,
+                            "account_move_id": move.id,
                             "quantity": 0,
                             "remaining_value": 0,
                             "value": balance,
@@ -166,26 +188,32 @@ class AccountMove(models.Model):
                             "company_id": move.company_id.id,
                             "stock_valuation_layer_id": svl_to_modify.id,
                             "l10n_ro_bill_accounting_date": move.date,
-    
                         }
                     )
-                    svl_to_modify.write({"remaining_value": svl_to_modify.remaining_value + balance,
-                               "l10n_ro_bill_accounting_date": move.date,
-                               "unit_cost": (svl_to_modify.remaining_value + balance)/svl_to_modify.remaining_qty,
-                               })
+                    svl_to_modify.write(
+                        {
+                            "remaining_value": svl_to_modify.remaining_value + balance,
+                            "l10n_ro_bill_accounting_date": move.date,
+                            "unit_cost": (svl_to_modify.remaining_value + balance)
+                            / svl_to_modify.remaining_qty,
+                        }
+                    )
         res = super().action_post()
 
         return res
 
     def button_draft(self):
-        # we are are creating the oposite svl values, and set to original l10n_ro_draft 
+        # we are are creating the oposite svl values, and set to original l10n_ro_draft
         for move in self:
             if (
                 move.is_l10n_ro_record
                 and move.stock_valuation_layer_ids
                 and move.state != "cancel"
             ):
-                for svl in move.stock_valuation_layer_ids.filtered(lambda r: not r.l10n_ro_draft_svl_id and not (r.l10n_ro_draft_svl_ids and r.quantity==0)):
+                for svl in move.stock_valuation_layer_ids.filtered(
+                    lambda r: not r.l10n_ro_draft_svl_id
+                    and not (r.l10n_ro_draft_svl_ids and r.quantity == 0)
+                ):
                     text_error = (
                         f"For AccountMove=({move.ref},{move.id}) at "
                         f"product=({svl.product_id.name},{svl.product_id.id}) "
@@ -204,26 +232,33 @@ class AccountMove(models.Model):
                                 + f" svl quantity is less than 0, is a out move with value from stock. You are not allowed to do it because were modifed also other svl (their value is taken from other svl). Make a inverse operation, or a manual journal entry."
                             )
                         )
-                            
+
                     if move.move_type != "entry":
                         # is bill/invoice
-                        if svl.quantity == 0: 
-                            if svl.stock_valuation_layer_id and svl.stock_valuation_layer_id.remaining_qty <=0: 
+                        if svl.quantity == 0:
+                            if (
+                                svl.stock_valuation_layer_id
+                                and svl.stock_valuation_layer_id.remaining_qty <= 0
+                            ):
                                 raise UserError(
                                     _(
                                         text_error
-                                        + f" Linked_svl={svl.stock_valuation_layer_id} quantity is less than 0." 
+                                        + f" Linked_svl={svl.stock_valuation_layer_id} quantity is less than 0."
                                         + to_do_error
                                     )
                                 )
-                            elif not svl.stock_valuation_layer_id and svl.remaining_qty == 0 and svl.quantity ==0:
+                            elif (
+                                not svl.stock_valuation_layer_id
+                                and svl.remaining_qty == 0
+                                and svl.quantity == 0
+                            ):
                                 raise UserError(
                                     _(
                                         text_error
-                                        + f" This was a manual SVL entry, that had modify the values of svl with stock when was added. Create the oposite svl entry" 
+                                        + f" This was a manual SVL entry, that had modify the values of svl with stock when was added. Create the oposite svl entry"
                                     )
                                 )
-                        
+
                         if svl.stock_valuation_layer_ids:
                             raise UserError(
                                 _(
@@ -249,7 +284,7 @@ class AccountMove(models.Model):
                                         text_error
                                         + " This is a Manual stock valuation that when"
                                         " was posted gave value to one or more svl. "
-                                        "You can not set it to draft. Create another one." 
+                                        "You can not set it to draft. Create another one."
                                     )
                                 )
                             else:
@@ -261,69 +296,97 @@ class AccountMove(models.Model):
                                         raise UserError(
                                             _(
                                                 text_error
-                                                + f" svl remaing quantity is zero. Is not posible to set to draft this account_move resulted form LandedCost" 
+                                                + f" svl remaing quantity is zero. Is not posible to set to draft this account_move resulted form LandedCost"
                                                 + to_do_error
                                             )
                                         )
-                                    value =  -1 * svl.value
-                                    svl.copy({"value": value, 
-                                              "l10n_ro_draft_svl_id": svl.id,
-                                              "description":"Draft:"+ svl.description})
-                                    svl_to_modify.write({"remaining_value":svl_to_modify.remaining_value - value,
-                                         "unit_cost":(svl_to_modify.remaining_value - value)/svl_to_modify.remaining_qty if svl_to_modify.remaining_qty else 0} )
+                                    value = -1 * svl.value
+                                    svl.copy(
+                                        {
+                                            "value": value,
+                                            "l10n_ro_draft_svl_id": svl.id,
+                                            "description": "Draft:" + svl.description,
+                                        }
+                                    )
+                                    svl_to_modify.write(
+                                        {
+                                            "remaining_value": svl_to_modify.remaining_value
+                                            - value,
+                                            "unit_cost": (
+                                                svl_to_modify.remaining_value - value
+                                            )
+                                            / svl_to_modify.remaining_qty
+                                            if svl_to_modify.remaining_qty
+                                            else 0,
+                                        }
+                                    )
                                     continue
-                                else:                                
+                                else:
                                     # is a value for stock that is going to be taken into account in next line
-                                    continue 
-                        account_move_line_qty = move.line_ids.filtered(lambda r: r.product_id == svl.product_id)[0].quantity
+                                    continue
+                        account_move_line_qty = move.line_ids.filtered(
+                            lambda r: r.product_id == svl.product_id
+                        )[0].quantity
                         if svl.remaining_qty != account_move_line_qty:
                             raise UserError(
                                 _(
                                     text_error
                                     + f" svl remaing quantity is less than the quantity form product line={account_move_line_qty}."
-                                    "You can not set to draft this entry - recreate a inventoy" 
+                                    "You can not set to draft this entry - recreate a inventoy"
                                 )
                             )
-                            
+
                         if not svl.l10n_ro_draft_svl_ids:
                             # case when we modify the original inventory_plus move
                             l10n_ro_draft_svl_id = svl
                         else:
                             # case when we modify the last posted inventory_plus move
                             # others should have something in l10n_ro_draft_svl_id/s
-                            l10n_ro_draft_svl_id = svl.stock_valuation_layer_ids.filtered(lambda r: not r.l10n_ro_draft_svl_id and not r.l10n_ro_draft_svl_ids)
-                            if len(l10n_ro_draft_svl_id)!=1:
+                            l10n_ro_draft_svl_id = (
+                                svl.stock_valuation_layer_ids.filtered(
+                                    lambda r: not r.l10n_ro_draft_svl_id
+                                    and not r.l10n_ro_draft_svl_ids
+                                )
+                            )
+                            if len(l10n_ro_draft_svl_id) != 1:
                                 raise UserError(
                                     _(
                                         text_error
-                                        + " we didn't one stock_valuation_layer_ids that are not for set to draft that are giving value. Found" 
-                                        f" l10n_ro_draft_svl_id={l10n_ro_draft_svl_id}" 
+                                        + " we didn't one stock_valuation_layer_ids that are not for set to draft that are giving value. Found"
+                                        f" l10n_ro_draft_svl_id={l10n_ro_draft_svl_id}"
                                     )
                                 )
-                                
+
                         value = l10n_ro_draft_svl_id.value
-                        
+
                     # we are creating a svl with the - value of entry that was set to draft
                     corected_svl = svl.create(
                         {
                             "description": f"Setting to draft inv=({move.id},{move.name})",
                             "remaining_value": 0,
-                                "account_move_id": move.id,
-                                "product_id": svl.product_id.id,
-                                "company_id": svl.company_id.id,
-                                "unit_cost": 0,
-                                "value": -1 * value,
-                                "remaining_value": 0,
-                                "quantity": 0,
-                                "remaining_qty": 0,
-                                "l10n_ro_bill_accounting_date": svl.l10n_ro_bill_accounting_date,
-                                "l10n_ro_valued_type": svl.l10n_ro_valued_type,
-                                "stock_valuation_layer_id":svl.id,
-                                "l10n_ro_draft_svl_id":l10n_ro_draft_svl_id.id ,
+                            "account_move_id": move.id,
+                            "product_id": svl.product_id.id,
+                            "company_id": svl.company_id.id,
+                            "unit_cost": 0,
+                            "value": -1 * value,
+                            "remaining_value": 0,
+                            "quantity": 0,
+                            "remaining_qty": 0,
+                            "l10n_ro_bill_accounting_date": svl.l10n_ro_bill_accounting_date,
+                            "l10n_ro_valued_type": svl.l10n_ro_valued_type,
+                            "stock_valuation_layer_id": svl.id,
+                            "l10n_ro_draft_svl_id": l10n_ro_draft_svl_id.id,
                         }
                     )
-                    
-                    svl_to_modify.write({"remaining_value":svl_to_modify.remaining_value - value,
-                                         "unit_cost":(svl_to_modify.remaining_value - value)/svl_to_modify.remaining_qty if svl_to_modify.remaining_qty else 0} )
-        
+
+                    svl_to_modify.write(
+                        {
+                            "remaining_value": svl_to_modify.remaining_value - value,
+                            "unit_cost": (svl_to_modify.remaining_value - value)
+                            / svl_to_modify.remaining_qty
+                            if svl_to_modify.remaining_qty
+                            else 0,
+                        }
+                    )
+
         return super().button_draft()

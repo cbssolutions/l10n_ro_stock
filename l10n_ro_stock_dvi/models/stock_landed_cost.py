@@ -54,7 +54,11 @@ class LandedCost(models.Model):
         ):
             return super(LandedCost, self).button_validate()
         if self.account_move_id:
-            raise UserError(_(f"For DVI (Landed Cost) = ({self.id}, {self.name}), you already have a Journal Entry. You can NOT revalidate. Create another Landed Cost (the reason is that you'll have old svl with this landed cost) "))
+            raise UserError(
+                _(
+                    f"For DVI (Landed Cost) = ({self.id}, {self.name}), you already have a Journal Entry. You can NOT revalidate. Create another Landed Cost (the reason is that you'll have old svl with this landed cost) "
+                )
+            )
 
         if not self.cost_lines:
             raise UserError(_("This dvi does not have cost lines."))

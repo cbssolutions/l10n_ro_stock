@@ -27,16 +27,32 @@ class AccountMove(models.Model):
         tracking=1,
     )
 
-    @api.constrains("l10n_ro_bill_for_picking", "state","move_type")
+    @api.constrains("l10n_ro_bill_for_picking", "state", "move_type")
     def _check_unique_l10n_ro_bill_for_picking(self):
         for rec in self:
             if rec.state == "done" and rec.l10n_ro_bill_for_picking:
-                if  rec.move_type not in ["in_invoice", "in_recepit"]:
-                    raise ValidationError(_(f"For invoice=({rec.id},{rec.name}) move_type must be 'in_invoice', 'in_recepit' but is {rec.move_type}. You have picking l10n_ro_bill_for_picking=({self.id},{self.name})."))
-                other_inv = self.search([("id", "!=", rec.id),("l10n_ro_bill_for_picking", "==", rec.l10n_ro_bill_for_picking.id)])
+                if rec.move_type not in ["in_invoice", "in_recepit"]:
+                    raise ValidationError(
+                        _(
+                            f"For invoice=({rec.id},{rec.name}) move_type must be 'in_invoice', 'in_recepit' but is {rec.move_type}. You have picking l10n_ro_bill_for_picking=({self.id},{self.name})."
+                        )
+                    )
+                other_inv = self.search(
+                    [
+                        ("id", "!=", rec.id),
+                        (
+                            "l10n_ro_bill_for_picking",
+                            "==",
+                            rec.l10n_ro_bill_for_picking.id,
+                        ),
+                    ]
+                )
                 if other_inv:
-                    raise ValidationError(_(f"For invoice=({rec.id},{rec.name}) can only have a invoice per picking l10n_ro_bill_for_picking=({self.id},{self.name}) you have also {other_inv}!"))
-                
+                    raise ValidationError(
+                        _(
+                            f"For invoice=({rec.id},{rec.name}) can only have a invoice per picking l10n_ro_bill_for_picking=({self.id},{self.name}) you have also {other_inv}!"
+                        )
+                    )
 
     def action_view_stock_valuation_layers(self):
         self.ensure_one()
@@ -49,7 +65,6 @@ class AccountMove(models.Model):
         context["no_at_date"] = True
         return dict(action, domain=domain, context=context)
 
-
     def _stock_account_prepare_anglo_saxon_in_lines_vals(self):
         # we do not create price difference at reception
         # we can not have price difference invoice price must be the svl price
@@ -60,7 +75,7 @@ class AccountMove(models.Model):
         return super(
             AccountMove, invoices
         )._stock_account_prepare_anglo_saxon_in_lines_vals()
-    
+
     def _stock_account_prepare_anglo_saxon_out_lines_vals(self):
         # nu se mai face descarcarea de gestiune la facturare
         invoices = self
@@ -85,18 +100,35 @@ class AccountMove(models.Model):
             if not picking:
                 continue
             text_error = f"For Bill:({move.id},{move.ref}) "
-            invoice_product_line = move.line_ids.filtered(lambda r: r.product_id.type=="product" and r.product_id.valuation == "real_time" and r.quantity!=0)
-            
-            if len(invoice_product_line) != len(picking.move_lines.stock_valuation_layer_ids.filtered(lambda r: not r.stock_valuation_layer_id)):
+            invoice_product_line = move.line_ids.filtered(
+                lambda r: r.product_id.type == "product"
+                and r.product_id.valuation == "real_time"
+                and r.quantity != 0
+            )
+
+            if len(invoice_product_line) != len(
+                picking.move_lines.stock_valuation_layer_ids.filtered(
+                    lambda r: not r.stock_valuation_layer_id
+                )
+            ):
                 # svl with stock_valuation_layer_id can be landed cost .. and should not be taken into consideration
-                raise ValidationError(_(text_error + " we have different products with real time valuation (invoice lines products compared with picking(svl))"))
+                raise ValidationError(
+                    _(
+                        text_error
+                        + " we have different products with real time valuation (invoice lines products compared with picking(svl))"
+                    )
+                )
             for line in invoice_product_line:
                 text_error += (
                     f" product=({line.product_id.id},{line.product_id.name}) "
                     f"qty = {line.quantity}"
                 )
                 line_qty = line.quantity
-                stock_move = picking.move_lines.filtered(lambda r: r.product_id==line.product_id and r.quantity_done != 0 and r.stock_valuation_layer_ids)
+                stock_move = picking.move_lines.filtered(
+                    lambda r: r.product_id == line.product_id
+                    and r.quantity_done != 0
+                    and r.stock_valuation_layer_ids
+                )
                 if len(stock_move) != 1:
                     raise UserError(
                         _(
@@ -116,7 +148,9 @@ class AccountMove(models.Model):
                             + f" the reception has invoice line_qty={line_qty} that is not equal with stock_move_qty={stock_move_qty}"
                         )
                     )
-                svl = stock_move.stock_valuation_layer_ids.filtered(lambda r: not r.stock_valuation_layer_id)
+                svl = stock_move.stock_valuation_layer_ids.filtered(
+                    lambda r: not r.stock_valuation_layer_id
+                )
                 # we filter the stock_valuation_layer_id that are in general landed costs
                 if len(svl) != 1:
                     raise UserError(
@@ -128,10 +162,15 @@ class AccountMove(models.Model):
                 if svl.remaining_qty == 0:
                     # we are not going to create any svl, we are not going to use in line the stock account
                     # but the expense account for consumtion
-                    line.write({
-                        "account_id": line.product_id._get_product_accounts()["expense"].id,
-                        "name": line.name + f"(Expensed account because in picking=({picking.id},{picking.name}) svl={svl} has 0 remaining qty)"
-                    })
+                    line.write(
+                        {
+                            "account_id": line.product_id._get_product_accounts()[
+                                "expense"
+                            ].id,
+                            "name": line.name
+                            + f"(Expensed account because in picking=({picking.id},{picking.name}) svl={svl} has 0 remaining qty)",
+                        }
+                    )
                 else:
                     created_svl = (
                         self.env["stock.valuation.layer"]
@@ -140,7 +179,7 @@ class AccountMove(models.Model):
                             {
                                 "description": f"Reception inv=({move.id},{move.ref}) picking=({picking.id},{picking.name})",
                                 "account_move_id": move.id,
-#                                "stock_move_id": stock_move.id,
+                                #                                "stock_move_id": stock_move.id,
                                 "product_id": line.product_id.id,
                                 "company_id": move.company_id.id,
                                 "unit_cost": 0,
@@ -150,13 +189,20 @@ class AccountMove(models.Model):
                                 "quantity": 0,
                                 "remaining_qty": 0,
                                 "l10n_ro_valued_type": "reception",
-                                "stock_valuation_layer_id":svl.id,
+                                "stock_valuation_layer_id": svl.id,
                             }
-                        ))
-                    svl.write({"remaining_value": svl.remaining_value + line.balance, 
-                               "l10n_ro_bill_accounting_date": move.date,
-                               "unit_cost":(svl.remaining_value + line.balance) /svl.remaining_qty if svl.remaining_qty else 0, 
-                               })
+                        )
+                    )
+                    svl.write(
+                        {
+                            "remaining_value": svl.remaining_value + line.balance,
+                            "l10n_ro_bill_accounting_date": move.date,
+                            "unit_cost": (svl.remaining_value + line.balance)
+                            / svl.remaining_qty
+                            if svl.remaining_qty
+                            else 0,
+                        }
+                    )
 
         res = super(AccountMove, self).action_post()
 

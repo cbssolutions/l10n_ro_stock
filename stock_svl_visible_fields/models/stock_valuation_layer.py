@@ -20,5 +20,5 @@ class StockValuationLayer(models.Model):
     )
     # should not exist becuase l10n_ro_invoice_id should not be used. but account_move_id
     # invoice_state = fields.Selection(
-        # string="Invoice Status", related="l10n_ro_invoice_id.state", readonly=1
+    # string="Invoice Status", related="l10n_ro_invoice_id.state", readonly=1
     # )

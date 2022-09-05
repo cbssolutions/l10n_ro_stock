@@ -15,12 +15,17 @@ class StockPicking(models.Model):
         if (
             len(self) == 1
             and self.is_l10n_ro_record
-            and hasattr(self, "purchase_id") and self.purchase_id # is installed puchase_stock
+            and hasattr(self, "purchase_id")
+            and self.purchase_id  # is installed puchase_stock
             and self.move_lines.filtered(
                 lambda r: r.quantity_done and r.product_id.valuation == "real_time"
             )
             # is not a notice - does not have journal entry for svl:
-            and not self.move_lines.stock_valuation_layer_ids.filtered(lambda r: r.account_move_id)
+            and not self.move_lines.stock_valuation_layer_ids.filtered(
+                lambda r: r.account_move_id
+            )
         ):
-            self.purchase_id.with_context(inv_for_reception_picking=self.id).action_create_invoice()
+            self.purchase_id.with_context(
+                inv_for_reception_picking=self.id
+            ).action_create_invoice()
         return res
