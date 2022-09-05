@@ -3,6 +3,7 @@
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
 from odoo import api, fields, models
 
+
 #!!!!!!!!!!!!! NOT USED ANYMORE !!!!!!!!!!!!!!!!!
 class StockReturnPickingLine(models.TransientModel):
     _inherit = "stock.return.picking.line"

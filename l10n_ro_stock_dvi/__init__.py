@@ -1,7 +1,6 @@
-from . import models
-from . import wizard
+from odoo import SUPERUSER_ID, _, api
 
-from odoo import _, api, SUPERUSER_ID
+from . import models, wizard
 
 
 def _post_init_hook_create_dvi_products(cr, registry):

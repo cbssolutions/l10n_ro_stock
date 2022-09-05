@@ -2,11 +2,12 @@
 # Copyright (C) 2022 NextERP Romania
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
 
+import logging
 from ast import literal_eval
+
 from odoo import _, fields, models
 from odoo.exceptions import UserError
 from odoo.tools import float_compare
-import logging
 
 _logger = logging.getLogger(__name__)
 

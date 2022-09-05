@@ -1,2 +1,1 @@
-from . import res_partner
-from . import stock_picking
+from . import res_partner, stock_picking

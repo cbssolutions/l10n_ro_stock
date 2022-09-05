@@ -1,6 +1,7 @@
 # Copyright (C) 2022 cbssolutions.ro
 from odoo import models
 
+
 class SaleOrder(models.Model):
     _inherit = "purchase.order"
 
